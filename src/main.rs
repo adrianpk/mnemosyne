@@ -5,6 +5,8 @@ use std::env;
 use std::io;
 use std::path::Path;
 
+use crate::document::index_label;
+
 use crossterm::{
     ExecutableCommand,
     event::{self, Event, KeyCode},
@@ -60,7 +62,7 @@ fn main() -> io::Result<()> {
                     };
                     let index_style = Style::default().add_modifier(Modifier::DIM);
                     let line = Line::from(vec![
-                        Span::styled(format!("[{}] ", i + 1), index_style),
+                        Span::styled(format!("[{}] ", index_label(i)), index_style),
                         Span::styled(p.clone(), style),
                     ]);
                     vec![line, Line::from("")]

@@ -44,3 +44,17 @@ impl Document {
         }
     }
 }
+
+pub fn index_label(i: usize) -> String {
+    if i < 9 {
+        format!("{}", i + 1)
+    } else if i < 9 + 26 {
+        let c = (b'a' + (i - 9) as u8) as char;
+        c.to_string()
+    } else {
+        let n = i - 9 - 26;
+        let first = (b'a' + (n / 26) as u8) as char;
+        let second = (b'a' + (n % 26) as u8) as char;
+        format!("{}{}", first, second)
+    }
+}
