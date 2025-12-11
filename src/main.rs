@@ -19,7 +19,7 @@ use ratatui::{
     layout::{Constraint, Layout},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph, Wrap},
 };
 
 use crate::app::App;
@@ -70,7 +70,9 @@ fn main() -> io::Result<()> {
                 .collect();
 
             let right_panel = Paragraph::new(doc_lines)
-                .block(Block::default().title("Document").borders(Borders::ALL));
+                .block(Block::default().title("Document").borders(Borders::ALL))
+                .wrap(Wrap { trim: false })
+                .scroll((app.document.scroll, 0));
 
             frame.render_widget(left_panel, chunks[0]);
             frame.render_widget(right_panel, chunks[1]);

@@ -4,6 +4,7 @@ use std::path::Path;
 pub struct Document {
     pub paragraphs: Vec<String>,
     pub selected: usize,
+    pub scroll: u16,
 }
 
 impl Document {
@@ -11,6 +12,7 @@ impl Document {
         Document {
             paragraphs: vec![String::new()],
             selected: 0,
+            scroll: 0,
         }
     }
 
@@ -29,18 +31,21 @@ impl Document {
                 paragraphs
             },
             selected: 0,
+            scroll: 0,
         })
     }
 
     pub fn select_next(&mut self) {
         if self.selected < self.paragraphs.len() - 1 {
             self.selected += 1;
+            self.scroll = (self.selected as u16).saturating_sub(2);
         }
     }
 
     pub fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
+            self.scroll = (self.selected as u16).saturating_sub(2);
         }
     }
 }
