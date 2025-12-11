@@ -69,10 +69,44 @@ fn main() -> io::Result<()> {
                 })
                 .collect();
 
+            let panel_width = chunks[1].width.saturating_sub(2) as usize;
+            let mut line_count = 0u16;
+            let mut selected_start = 0u16;
+
+            for (i, p) in app.document.paragraphs.iter().enumerate() {
+                if i == app.document.selected {
+                    selected_start = line_count;
+                }
+                let label = format!("[{}] ", index_label(i));
+                let text_len = label.len() + p.len();
+                let lines = if panel_width > 0 {
+                    ((text_len / panel_width) + 1) as u16
+                } else {
+                    1
+                };
+                line_count += lines + 1;
+            }
+            let panel_height = chunks[1].height.saturating_sub(2);
+            let selected_label = format!("[{}] ", index_label(app.document.selected));
+            let selected_text_len =
+                selected_label.len() + app.document.paragraphs[app.document.selected].len();
+            let selected_lines = if panel_width > 0 {
+                ((selected_text_len / panel_width) + 1) as u16
+            } else {
+                1
+            };
+            let selected_end = selected_start + selected_lines + 1;
+
+            let scroll = if selected_end > panel_height {
+                selected_start
+            } else {
+                0
+            };
+
             let right_panel = Paragraph::new(doc_lines)
                 .block(Block::default().title("Document").borders(Borders::ALL))
                 .wrap(Wrap { trim: false })
-                .scroll((app.document.scroll, 0));
+                .scroll((scroll, 0));
 
             frame.render_widget(left_panel, chunks[0]);
             frame.render_widget(right_panel, chunks[1]);
