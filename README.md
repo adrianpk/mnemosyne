@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/img/mnemosyne.png" alt="Mnemosyne" height="120">
+</p>
+
 # Mnemosyne
 
 A terminal-based proofreader that helps refine your texts through a quiet interface.
@@ -17,6 +21,8 @@ The goal is to build something useful while actually getting the 'kung-fu' of ow
 ## Status
 
 Early. Very early. Two panels on a screen and a lot of curiosity.
+
+[See it in action](docs/gallery/index.md)
 
 ## Usage
 
