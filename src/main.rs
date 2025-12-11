@@ -10,10 +10,13 @@ use crossterm::{
     event::{self, Event, KeyCode},
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
+
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Layout},
+    style::{Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
 
@@ -44,22 +47,27 @@ fn main() -> io::Result<()> {
             let left_panel = Paragraph::new("AI Assistant")
                 .block(Block::default().title("Conversation").borders(Borders::ALL));
 
-            let doc_content: String = app
+            let doc_lines: Vec<Line> = app
                 .document
                 .paragraphs
                 .iter()
                 .enumerate()
-                .map(|(i, p)| {
-                    if i == app.document.selected {
-                        format!(">> [{}] {}", i + 1, p)
+                .flat_map(|(i, p)| {
+                    let style = if i == app.document.selected {
+                        Style::default().add_modifier(Modifier::REVERSED)
                     } else {
-                        format!("   [{}] {}", i + 1, p)
-                    }
+                        Style::default()
+                    };
+                    let index_style = Style::default().add_modifier(Modifier::DIM);
+                    let line = Line::from(vec![
+                        Span::styled(format!("[{}] ", i + 1), index_style),
+                        Span::styled(p.clone(), style),
+                    ]);
+                    vec![line, Line::from("")]
                 })
-                .collect::<Vec<_>>()
-                .join("\n\n");
+                .collect();
 
-            let right_panel = Paragraph::new(doc_content)
+            let right_panel = Paragraph::new(doc_lines)
                 .block(Block::default().title("Document").borders(Borders::ALL));
 
             frame.render_widget(left_panel, chunks[0]);
