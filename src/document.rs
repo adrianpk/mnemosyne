@@ -1,4 +1,3 @@
-
 use std::fs;
 use std::path::Path;
 
@@ -31,5 +30,17 @@ impl Document {
             },
             selected: 0,
         })
+    }
+
+    pub fn select_next(&mut self) {
+        if self.selected < self.paragraphs.len() - 1 {
+            self.selected += 1;
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+        }
     }
 }

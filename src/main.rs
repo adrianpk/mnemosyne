@@ -1,7 +1,9 @@
 mod app;
 mod document;
 
+use std::env;
 use std::io;
+use std::path::Path;
 
 use crossterm::{
     ExecutableCommand,
@@ -22,7 +24,16 @@ fn main() -> io::Result<()> {
     io::stdout().execute(EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
-    let mut app = App::new();
+    let args: Vec<String> = env::args().collect();
+    let mut app = if args.len() > 1 {
+        let path = Path::new(&args[1]);
+        App::from_file(path).unwrap_or_else(|e| {
+            eprintln!("Error loading file: {}", e);
+            std::process::exit(1);
+        })
+    } else {
+        App::new()
+    };
 
     while app.running {
         terminal.draw(|frame| {
@@ -33,7 +44,22 @@ fn main() -> io::Result<()> {
             let left_panel = Paragraph::new("AI Assistant")
                 .block(Block::default().title("Conversation").borders(Borders::ALL));
 
-            let right_panel = Paragraph::new("Document content here")
+            let doc_content: String = app
+                .document
+                .paragraphs
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    if i == app.document.selected {
+                        format!(">> [{}] {}", i + 1, p)
+                    } else {
+                        format!("   [{}] {}", i + 1, p)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n\n");
+
+            let right_panel = Paragraph::new(doc_content)
                 .block(Block::default().title("Document").borders(Borders::ALL));
 
             frame.render_widget(left_panel, chunks[0]);
@@ -41,8 +67,11 @@ fn main() -> io::Result<()> {
         })?;
 
         if let Event::Key(key) = event::read()? {
-            if key.code == KeyCode::Char('q') {
-                app.quit();
+            match key.code {
+                KeyCode::Char('q') => app.quit(),
+                KeyCode::Char('j') | KeyCode::Down => app.document.select_next(),
+                KeyCode::Char('k') | KeyCode::Up => app.document.select_prev(),
+                _ => {}
             }
         }
     }
