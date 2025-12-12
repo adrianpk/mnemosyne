@@ -1,3 +1,4 @@
+mod agent;
 mod app;
 mod document;
 mod ui;
@@ -13,12 +14,15 @@ use crossterm::{
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 
-use crate::app::App;
+use crate::agent::{Agent, MockAgent, Prompt};
+use crate::app::{App, AppMode};
 
 fn main() -> io::Result<()> {
     enable_raw_mode()?;
     io::stdout().execute(EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
+
+    let agent = MockAgent::new();
 
     let args: Vec<String> = env::args().collect();
     let mut app = if args.len() > 1 {
@@ -35,11 +39,67 @@ fn main() -> io::Result<()> {
         terminal.draw(|frame| ui::draw(frame, &app))?;
 
         if let Event::Key(key) = event::read()? {
+            // Global keybindings (work in any mode)
             match key.code {
-                KeyCode::Char('q') | KeyCode::F(11) => app.quit(),
-                KeyCode::Char('j') | KeyCode::Down => app.document.select_next(),
-                KeyCode::Char('k') | KeyCode::Up => app.document.select_prev(),
+                KeyCode::F(11) => {
+                    app.quit();
+                    continue;
+                }
+                KeyCode::Char('q') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                    app.quit();
+                    continue;
+                }
                 _ => {}
+            }
+
+            // Mode-specific keybindings
+            match &app.mode {
+                AppMode::Normal => match key.code {
+                    KeyCode::Char('j') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        app.document.select_next()
+                    }
+                    KeyCode::Char('k') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        app.document.select_prev()
+                    }
+                    KeyCode::Down => app.document.select_next(),
+                    KeyCode::Up => app.document.select_prev(),
+                    KeyCode::Char(c) => app.input.push(c),
+                    KeyCode::Backspace => {
+                        app.input.pop();
+                    }
+                    KeyCode::Enter => {
+                        if !app.input.is_empty() {
+                            let user_msg = app.input.clone();
+                            app.conversation.push(crate::app::Message {
+                                role: crate::app::Role::User,
+                                content: user_msg.clone(),
+                            });
+
+                            let selected_idx = app.document.selected;
+                            let selected_paragraph = &app.document.paragraphs[selected_idx];
+                            let prompt = Prompt::new(
+                                &app.system_prompt,
+                                &user_msg,
+                                selected_paragraph,
+                            );
+                            let suggestion = agent.suggest(&prompt);
+
+                            app.conversation.push(crate::app::Message {
+                                role: crate::app::Role::Assistant,
+                                content: suggestion.explanation.clone(),
+                            });
+
+                            app.enter_review(suggestion, selected_idx);
+                            app.input.clear();
+                        }
+                    }
+                    _ => {}
+                },
+                AppMode::Review { .. } => match key.code {
+                    KeyCode::Enter => app.accept_suggestion(),
+                    KeyCode::Esc => app.reject_suggestion(),
+                    _ => {}
+                },
             }
         }
     }
