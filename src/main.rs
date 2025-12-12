@@ -1,26 +1,17 @@
 mod app;
 mod document;
+mod ui;
 
 use std::env;
 use std::io;
 use std::path::Path;
-
-use crate::document::index_label;
 
 use crossterm::{
     ExecutableCommand,
     event::{self, Event, KeyCode},
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-
-use ratatui::{
-    Terminal,
-    backend::CrosstermBackend,
-    layout::{Constraint, Layout},
-    style::{Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Wrap},
-};
+use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crate::app::App;
 
@@ -41,80 +32,11 @@ fn main() -> io::Result<()> {
     };
 
     while app.running {
-        terminal.draw(|frame| {
-            let chunks =
-                Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-                    .split(frame.area());
-
-            let left_panel = Paragraph::new("AI Assistant")
-                .block(Block::default().title("Conversation").borders(Borders::ALL));
-
-            let doc_lines: Vec<Line> = app
-                .document
-                .paragraphs
-                .iter()
-                .enumerate()
-                .flat_map(|(i, p)| {
-                    let style = if i == app.document.selected {
-                        Style::default().add_modifier(Modifier::REVERSED)
-                    } else {
-                        Style::default()
-                    };
-                    let index_style = Style::default().add_modifier(Modifier::DIM);
-                    let line = Line::from(vec![
-                        Span::styled(format!("[{}] ", index_label(i)), index_style),
-                        Span::styled(p.clone(), style),
-                    ]);
-                    vec![line, Line::from("")]
-                })
-                .collect();
-
-            let panel_width = chunks[1].width.saturating_sub(2) as usize;
-            let mut line_count = 0u16;
-            let mut selected_start = 0u16;
-
-            for (i, p) in app.document.paragraphs.iter().enumerate() {
-                if i == app.document.selected {
-                    selected_start = line_count;
-                }
-                let label = format!("[{}] ", index_label(i));
-                let text_len = label.len() + p.len();
-                let lines = if panel_width > 0 {
-                    ((text_len / panel_width) + 1) as u16
-                } else {
-                    1
-                };
-                line_count += lines + 1;
-            }
-            let panel_height = chunks[1].height.saturating_sub(2);
-            let selected_label = format!("[{}] ", index_label(app.document.selected));
-            let selected_text_len =
-                selected_label.len() + app.document.paragraphs[app.document.selected].len();
-            let selected_lines = if panel_width > 0 {
-                ((selected_text_len / panel_width) + 1) as u16
-            } else {
-                1
-            };
-            let selected_end = selected_start + selected_lines + 1;
-
-            let scroll = if selected_end > panel_height {
-                selected_start
-            } else {
-                0
-            };
-
-            let right_panel = Paragraph::new(doc_lines)
-                .block(Block::default().title("Document").borders(Borders::ALL))
-                .wrap(Wrap { trim: false })
-                .scroll((scroll, 0));
-
-            frame.render_widget(left_panel, chunks[0]);
-            frame.render_widget(right_panel, chunks[1]);
-        })?;
+        terminal.draw(|frame| ui::draw(frame, &app))?;
 
         if let Event::Key(key) = event::read()? {
             match key.code {
-                KeyCode::Char('q') => app.quit(),
+                KeyCode::Char('q') | KeyCode::F(11) => app.quit(),
                 KeyCode::Char('j') | KeyCode::Down => app.document.select_next(),
                 KeyCode::Char('k') | KeyCode::Up => app.document.select_prev(),
                 _ => {}

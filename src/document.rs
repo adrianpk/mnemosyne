@@ -4,7 +4,6 @@ use std::path::Path;
 pub struct Document {
     pub paragraphs: Vec<String>,
     pub selected: usize,
-    pub scroll: u16,
 }
 
 impl Document {
@@ -12,7 +11,6 @@ impl Document {
         Document {
             paragraphs: vec![String::new()],
             selected: 0,
-            scroll: 0,
         }
     }
 
@@ -31,7 +29,6 @@ impl Document {
                 paragraphs
             },
             selected: 0,
-            scroll: 0,
         })
     }
 
