@@ -1,12 +1,12 @@
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
 };
 
-use crate::app::App;
+use crate::app::{App, AppMode};
 use crate::document::index_label;
 use super::widgets::render_function_bar;
 
@@ -22,29 +22,85 @@ pub fn draw(frame: &mut Frame, app: &App) {
     let panels = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(main_layout[1]);
 
-    draw_conversation_panel(frame, &panels[0]);
+    draw_conversation_panel(frame, app, &panels[0]);
     draw_document_panel(frame, app, &panels[1]);
 }
 
-fn draw_conversation_panel(frame: &mut Frame, area: &Rect) {
-    let panel = Paragraph::new("AI Assistant")
-        .block(Block::default().title("Conversation").borders(Borders::ALL));
-    frame.render_widget(panel, *area);
+fn draw_conversation_panel(frame: &mut Frame, app: &App, area: &Rect) {
+    use crate::app::Role;
+
+    let mut lines: Vec<Line> = Vec::new();
+    for msg in &app.conversation {
+        let (prefix, style) = match msg.role {
+            Role::User => ("> ", Style::default().fg(Color::Cyan)),
+            Role::Assistant => ("", Style::default().fg(Color::White)),
+        };
+        lines.push(Line::from(Span::styled(format!("{}{}", prefix, msg.content), style)));
+        lines.push(Line::from(""));
+    }
+
+    // Show input or review hint depending on mode
+    match &app.mode {
+        AppMode::Normal => {
+            let input_style = Style::default().fg(Color::Cyan);
+            lines.push(Line::from(Span::styled(format!("> {}_", app.input), input_style)));
+        }
+        AppMode::Review { .. } => {
+            let hint_style = Style::default().fg(Color::Yellow);
+            lines.push(Line::from(Span::styled(
+                "[Enter] Accept  [Esc] Discard",
+                hint_style,
+            )));
+        }
+    }
+
+    let conversation = Paragraph::new(lines)
+        .block(Block::default().title("Conversation").borders(Borders::ALL))
+        .wrap(Wrap { trim: false });
+    frame.render_widget(conversation, *area);
 }
 
 fn draw_document_panel(frame: &mut Frame, app: &App, area: &Rect) {
+    let review_info = match &app.mode {
+        AppMode::Review { suggestion, paragraph_index } => Some((suggestion, *paragraph_index)),
+        AppMode::Normal => None,
+    };
+
     let doc_lines: Vec<Line> = app
         .document
         .paragraphs
         .iter()
         .enumerate()
         .flat_map(|(i, p)| {
-            let style = if i == app.document.selected {
+            let index_style = Style::default().add_modifier(Modifier::DIM);
+
+            // Check if this paragraph is being reviewed
+            if let Some((suggestion, review_idx)) = &review_info {
+                if i == *review_idx {
+                    // Show diff view (Tokyo Night palette)
+                    let removed_style = Style::default().fg(Color::Rgb(224, 175, 104)); // yellow
+                    let added_style = Style::default().fg(Color::Rgb(187, 154, 247));   // purple
+
+                    let label = Span::styled(format!("[{}] ", index_label(i)), index_style);
+                    let removed_line = Line::from(vec![
+                        label.clone(),
+                        Span::styled(format!("- {}", suggestion.original), removed_style),
+                    ]);
+                    let added_line = Line::from(vec![
+                        Span::styled("    ", index_style), // spacing to align with label
+                        Span::styled(format!("+ {}", suggestion.replacement), added_style),
+                    ]);
+
+                    return vec![removed_line, added_line, Line::from("")];
+                }
+            }
+
+            // Normal view
+            let style = if i == app.document.selected && review_info.is_none() {
                 Style::default().add_modifier(Modifier::REVERSED)
             } else {
                 Style::default()
             };
-            let index_style = Style::default().add_modifier(Modifier::DIM);
             let line = Line::from(vec![
                 Span::styled(format!("[{}] ", index_label(i)), index_style),
                 Span::styled(p.clone(), style),
