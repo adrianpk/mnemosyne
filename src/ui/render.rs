@@ -39,7 +39,6 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App, area: &Rect) {
         lines.push(Line::from(""));
     }
 
-    // Show input or review hint depending on mode
     match &app.mode {
         AppMode::Normal => {
             let input_style = Style::default().fg(Color::Cyan);
@@ -74,10 +73,10 @@ fn draw_document_panel(frame: &mut Frame, app: &App, area: &Rect) {
         .flat_map(|(i, p)| {
             let index_style = Style::default().add_modifier(Modifier::DIM);
 
-            // Check if this paragraph is being reviewed
+            // NOTE: I need to check if this paragraph is being reviewed
             if let Some((suggestion, review_idx)) = &review_info {
                 if i == *review_idx {
-                    // Show diff view (Tokyo Night palette)
+                    // Show diff view
                     let removed_style = Style::default().fg(Color::Rgb(224, 175, 104)); // yellow
                     let added_style = Style::default().fg(Color::Rgb(187, 154, 247));   // purple
 
@@ -87,7 +86,7 @@ fn draw_document_panel(frame: &mut Frame, app: &App, area: &Rect) {
                         Span::styled(format!("- {}", suggestion.original), removed_style),
                     ]);
                     let added_line = Line::from(vec![
-                        Span::styled("    ", index_style), // spacing to align with label
+                        Span::styled("    ", index_style), // NOTE: This letme add spacing to align with label
                         Span::styled(format!("+ {}", suggestion.replacement), added_style),
                     ]);
 

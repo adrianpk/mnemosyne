@@ -2,6 +2,10 @@
 
 ## Screenshots
 
-### Document navigation
+### Ask for feedback 
 
-![Mnemosyne CLI](../img/cli.png)
+![Mnemosyne CLI](../img/cli-feedback.png)
+
+### Accepting it
+~~
+![Mnemosyne CLI](../img/cli-accept.png)
