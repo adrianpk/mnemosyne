@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::agent::Suggestion;
+use crate::agent::{prompts, Suggestion};
 use crate::document::Document;
 
 pub struct Message {
@@ -87,9 +87,5 @@ impl App {
 }
 
 fn default_system_prompt() -> String {
-    String::from(
-        "You are an expert proofreader and writing assistant. \
-        Your role is to help improve text clarity, grammar, style, and flow. \
-        Be concise and specific in your suggestions."
-    )
+    prompts::system_prompt()
 }
