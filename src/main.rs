@@ -14,15 +14,21 @@ use crossterm::{
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 
-use crate::agent::{Agent, MockAgent, Prompt};
-use crate::app::{App, AppMode};
+use crate::agent::{
+    Agent, LLMAgent, MockAgent, OpenAIProvider, Prompt, ResponseMode,
+    prompts::{self, operations},
+};
+use crate::app::{App, AppMode, Message, Role};
 
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     enable_raw_mode()?;
     io::stdout().execute(EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
-    let agent = MockAgent::new();
+    // Try to create LLM agent, fall back to mock
+    let llm_agent = OpenAIProvider::new().ok().map(LLMAgent::new);
+    let mock_agent = MockAgent::new();
 
     let args: Vec<String> = env::args().collect();
     let mut app = if args.len() > 1 {
@@ -34,6 +40,19 @@ fn main() -> io::Result<()> {
     } else {
         App::new()
     };
+
+    // NOTE: Show which agent is active
+    if llm_agent.is_some() {
+        app.conversation.push(Message {
+            role: Role::Assistant,
+            content: String::from("LLM agent ready (OpenAI)."),
+        });
+    } else {
+        app.conversation.push(Message {
+            role: Role::Assistant,
+            content: String::from("No API key found. Using mock agent."),
+        });
+    }
 
     while app.running {
         terminal.draw(|frame| ui::draw(frame, &app))?;
@@ -67,30 +86,75 @@ fn main() -> io::Result<()> {
                     KeyCode::Backspace => {
                         app.input.pop();
                     }
-                    KeyCode::Enter => {
-                        if !app.input.is_empty() {
-                            let user_msg = app.input.clone();
-                            app.conversation.push(crate::app::Message {
-                                role: crate::app::Role::User,
-                                content: user_msg.clone(),
-                            });
+                    KeyCode::Enter | KeyCode::F(3) => {
+                        let (user_input, operation_prompt, is_critique) = if key.code == KeyCode::F(3) {
+                            (String::from("/critique"), operations::CRITIQUE, true)
+                        } else if app.input.starts_with("/critique") {
+                            (app.input.clone(), operations::CRITIQUE, true)
+                        } else if !app.input.is_empty() {
+                            (app.input.clone(), operations::GRAMMAR, false)
+                        } else {
+                            continue; 
+                        };
+                        app.input.clear();
 
-                            let selected_idx = app.document.selected;
-                            let selected_paragraph = &app.document.paragraphs[selected_idx];
+                        app.conversation.push(Message {
+                            role: Role::User,
+                            content: user_input.clone(),
+                        });
+
+                        let selected_idx = app.document.selected;
+                        let selected_paragraph = &app.document.paragraphs[selected_idx];
+
+                        if let Some(ref agent) = llm_agent {
                             let prompt = Prompt::new(
-                                &app.system_prompt,
-                                &user_msg,
+                                &prompts::system_prompt(),
+                                operation_prompt,
                                 selected_paragraph,
                             );
-                            let suggestion = agent.suggest(&prompt);
 
-                            app.conversation.push(crate::app::Message {
-                                role: crate::app::Role::Assistant,
+                            match agent.send(&prompt).await {
+                                Ok(response) => {
+                                    // NOTE: how comments in conversation
+                                    for comment in &response.comments {
+                                        app.conversation.push(Message {
+                                            role: Role::Assistant,
+                                            content: comment.clone(),
+                                        });
+                                    }
+
+                                    // NOTE: Only enter review mode if there's replacement text
+                                    if response.result.mode != ResponseMode::Critique
+                                        && !response.result.text.is_empty()
+                                    {
+                                        let suggestion = response.to_suggestion(selected_paragraph);
+                                        app.enter_review(suggestion, selected_idx);
+                                    }
+                                }
+                                Err(e) => {
+                                    app.conversation.push(Message {
+                                        role: Role::Assistant,
+                                        content: format!("Error: {}", e),
+                                    });
+                                }
+                            }
+                        } else {
+                            // Use mock agent
+                            let prompt = Prompt::new(
+                                &app.system_prompt,
+                                &user_input,
+                                selected_paragraph,
+                            );
+                            let suggestion = mock_agent.suggest(&prompt);
+
+                            app.conversation.push(Message {
+                                role: Role::Assistant,
                                 content: suggestion.explanation.clone(),
                             });
 
-                            app.enter_review(suggestion, selected_idx);
-                            app.input.clear();
+                            if !is_critique {
+                                app.enter_review(suggestion, selected_idx);
+                            }
                         }
                     }
                     _ => {}
