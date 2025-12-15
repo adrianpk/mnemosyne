@@ -20,7 +20,7 @@ impl std::fmt::Display for LLMError {
             LLMError::MissingApiKey => write!(f, "API key not found in environment"),
             LLMError::RequestFailed(e) => write!(f, "Request failed: {}", e),
             LLMError::InvalidResponse(e) => write!(f, "Invalid response: {}", e),
-            LLMError::ParseError(e) => write!(f, "JSON parse error: {}", e),
+            LLMError::ParseError(_) => write!(f, "Could not parse response. Please try again."),
         }
     }
 }
