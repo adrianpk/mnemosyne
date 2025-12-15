@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use tui_textarea::TextArea;
+
 use crate::agent::{prompts, Suggestion};
 use crate::document::Document;
 
@@ -24,18 +26,24 @@ pub enum AppMode {
         alternatives: Vec<String>,
         paragraph_index: usize,
     },
+    /// Editing a paragraph directly
+    Edit {
+        paragraph_index: usize,
+        original: String,
+    },
 }
 
-pub struct App {
+pub struct App<'a> {
     pub document: Document,
     pub running: bool,
     pub input: String,
     pub conversation: Vec<Message>,
     pub system_prompt: String,
     pub mode: AppMode,
+    pub editor: Option<TextArea<'a>>,
 }
 
-impl App {
+impl<'a> App<'a> {
     pub fn new() -> Self {
         App {
             document: Document::new(),
@@ -44,6 +52,7 @@ impl App {
             conversation: Vec::new(),
             system_prompt: default_system_prompt(),
             mode: AppMode::Normal,
+            editor: None,
         }
     }
 
@@ -55,6 +64,7 @@ impl App {
             conversation: Vec::new(),
             system_prompt: default_system_prompt(),
             mode: AppMode::Normal,
+            editor: None,
         })
     }
 
@@ -119,6 +129,46 @@ impl App {
                 content: String::from("Selection cancelled."),
             });
         }
+        self.mode = AppMode::Normal;
+    }
+
+    pub fn enter_edit(&mut self) {
+        let paragraph_index = self.document.selected;
+        let original = self.document.paragraphs[paragraph_index].clone();
+
+        let mut textarea = TextArea::default();
+        textarea.insert_str(&original);
+
+        self.editor = Some(textarea);
+        self.mode = AppMode::Edit {
+            paragraph_index,
+            original,
+        };
+    }
+
+    pub fn accept_edit(&mut self) {
+        if let AppMode::Edit { paragraph_index, .. } = &self.mode {
+            if let Some(editor) = &self.editor {
+                let new_text = editor.lines().join("\n");
+                self.document.paragraphs[*paragraph_index] = new_text;
+                self.conversation.push(Message {
+                    role: Role::Assistant,
+                    content: String::from("Edit applied."),
+                });
+            }
+        }
+        self.editor = None;
+        self.mode = AppMode::Normal;
+    }
+
+    pub fn cancel_edit(&mut self) {
+        if let AppMode::Edit { .. } = &self.mode {
+            self.conversation.push(Message {
+                role: Role::Assistant,
+                content: String::from("Edit cancelled."),
+            });
+        }
+        self.editor = None;
         self.mode = AppMode::Normal;
     }
 }

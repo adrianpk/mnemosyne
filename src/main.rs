@@ -8,12 +8,15 @@ use std::io;
 use std::path::Path;
 use std::time::Duration;
 
-use crossterm::{
-    ExecutableCommand,
-    event::{self, Event, KeyCode},
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+use ratatui::{
+    Terminal,
+    backend::CrosstermBackend,
+    crossterm::{
+        ExecutableCommand,
+        event::{self, Event, KeyCode},
+        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    },
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crate::agent::{
     Agent, LLMAgent, MockAgent, OpenAIProvider, Prompt, ResponseMode,
@@ -83,6 +86,9 @@ async fn main() -> io::Result<()> {
                     }
                     KeyCode::Down => app.document.select_next(),
                     KeyCode::Up => app.document.select_prev(),
+                    KeyCode::Char('e') if app.input.is_empty() => {
+                        app.enter_edit();
+                    }
                     KeyCode::Char(c) => app.input.push(c),
                     KeyCode::Backspace => {
                         app.input.pop();
@@ -231,6 +237,17 @@ async fn main() -> io::Result<()> {
                     }
                     KeyCode::Esc => app.cancel_select_alternative(),
                     _ => {}
+                },
+                AppMode::Edit { .. } => match key.code {
+                    KeyCode::Esc => app.cancel_edit(),
+                    KeyCode::Enter if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        app.accept_edit();
+                    }
+                    _ => {
+                        if let Some(editor) = &mut app.editor {
+                            editor.input(key);
+                        }
+                    }
                 },
             }
         }

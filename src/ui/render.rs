@@ -10,7 +10,7 @@ use crate::app::{App, AppMode};
 use crate::document::index_label;
 use super::widgets::render_function_bar;
 
-pub fn draw(frame: &mut Frame, app: &App) {
+pub fn draw(frame: &mut Frame, app: &App<'_>) {
     let main_layout = Layout::vertical([
         Constraint::Length(1),
         Constraint::Min(0),
@@ -26,7 +26,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     draw_document_panel(frame, app, &panels[1]);
 }
 
-fn draw_conversation_panel(frame: &mut Frame, app: &App, area: &Rect) {
+fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
     use crate::app::Role;
 
     let mut lines: Vec<Line> = Vec::new();
@@ -56,6 +56,13 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App, area: &Rect) {
             let hint = format!("[1-{}] Apply  [Esc] Cancel", alternatives.len());
             lines.push(Line::from(Span::styled(hint, hint_style)));
         }
+        AppMode::Edit { .. } => {
+            let hint_style = Style::default().fg(Color::Yellow);
+            lines.push(Line::from(Span::styled(
+                "[Ctrl+Enter] Apply  [Esc] Cancel",
+                hint_style,
+            )));
+        }
     }
 
     let conversation = Paragraph::new(lines)
@@ -64,7 +71,37 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App, area: &Rect) {
     frame.render_widget(conversation, *area);
 }
 
-fn draw_document_panel(frame: &mut Frame, app: &App, area: &Rect) {
+fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
+    // Check if we're in Edit mode
+    if let AppMode::Edit { paragraph_index, original } = &app.mode {
+        // Split area: original on top, editor below
+        let chunks = Layout::vertical([
+            Constraint::Length(5), // Original text area
+            Constraint::Min(3),    // Editor area
+        ])
+        .split(*area);
+
+        // Draw original text
+        let index_style = Style::default().add_modifier(Modifier::DIM);
+        let removed_style = Style::default().fg(Color::Rgb(224, 175, 104)); // yellow
+        let original_lines = vec![
+            Line::from(vec![
+                Span::styled(format!("[{}] ", index_label(*paragraph_index)), index_style),
+                Span::styled(format!("- {}", original), removed_style),
+            ]),
+        ];
+        let original_panel = Paragraph::new(original_lines)
+            .block(Block::default().title("Original").borders(Borders::ALL))
+            .wrap(Wrap { trim: false });
+        frame.render_widget(original_panel, chunks[0]);
+
+        // Draw editor
+        if let Some(editor) = &app.editor {
+            frame.render_widget(editor, chunks[1]);
+        }
+        return;
+    }
+
     let review_info = match &app.mode {
         AppMode::Review { suggestion, paragraph_index } => Some((suggestion, *paragraph_index)),
         _ => None,
@@ -123,7 +160,7 @@ fn draw_document_panel(frame: &mut Frame, app: &App, area: &Rect) {
     frame.render_widget(panel, *area);
 }
 
-fn calculate_scroll(app: &App, area: &Rect) -> u16 {
+fn calculate_scroll(app: &App<'_>, area: &Rect) -> u16 {
     let panel_width = area.width.saturating_sub(2) as usize;
     let panel_height = area.height.saturating_sub(2);
 
