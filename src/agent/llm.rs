@@ -1,8 +1,27 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 use super::{LLMResponse, Prompt};
+
+/// Log LLM responses for debugging parse errors.
+fn log_response(content: &str, error: Option<&str>) {
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/mnemosyne-llm.log")
+    {
+        let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+        let _ = writeln!(file, "=== {} ===", timestamp);
+        let _ = writeln!(file, "{}", content);
+        if let Some(e) = error {
+            let _ = writeln!(file, "ERROR: {}", e);
+        }
+        let _ = writeln!(file, "");
+    }
+}
 
 // Error Types
 
@@ -150,9 +169,15 @@ impl LLMProvider for OpenAIProvider {
             .map(|s| s.trim())
             .unwrap_or(content.trim());
 
-        let llm_response: LLMResponse = serde_json::from_str(clean_content)
-            .map_err(|e| LLMError::ParseError(format!("{}: {}", e, content)))?;
+        let llm_response: LLMResponse = match serde_json::from_str(clean_content) {
+            Ok(resp) => resp,
+            Err(e) => {
+                log_response(clean_content, Some(&e.to_string()));
+                return Err(LLMError::ParseError(format!("{}: {}", e, content)));
+            }
+        };
 
+        log_response(clean_content, None);
         Ok(llm_response)
     }
 }

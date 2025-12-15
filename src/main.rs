@@ -19,7 +19,7 @@ use ratatui::{
 };
 
 use crate::agent::{
-    Agent, LLMAgent, MockAgent, OpenAIProvider, Prompt, ResponseMode,
+    Agent, LLMAgent, MockAgent, OpenAIProvider, Prompt,
     prompts::{self, operations},
 };
 use crate::app::{App, AppMode, Message, Role};
@@ -93,8 +93,9 @@ async fn main() -> io::Result<()> {
                     KeyCode::Backspace => {
                         app.input.pop();
                     }
-                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) => {
-                        let (user_input, operation_prompt, is_critique) = if key.code == KeyCode::F(3) {
+                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) | KeyCode::F(9) => {
+                        // is_informative: operations that don't auto-apply (Critique, Thesaurus, Overuse)
+                        let (user_input, operation_prompt, is_informative) = if key.code == KeyCode::F(3) {
                             (String::from("/critique"), operations::CRITIQUE, true)
                         } else if key.code == KeyCode::F(5) {
                             (String::from("/style"), operations::STYLE, false)
@@ -103,7 +104,9 @@ async fn main() -> io::Result<()> {
                         } else if key.code == KeyCode::F(7) {
                             (String::from("/rephrase"), operations::REPHRASE, false)
                         } else if key.code == KeyCode::F(8) {
-                            (String::from("/thesaurus"), operations::THESAURUS, false)
+                            (String::from("/thesaurus"), operations::THESAURUS, true)
+                        } else if key.code == KeyCode::F(9) {
+                            (String::from("/overuse"), operations::OVERUSE, true)
                         } else if app.input.starts_with("/critique") {
                             (app.input.clone(), operations::CRITIQUE, true)
                         } else if app.input.starts_with("/style") {
@@ -113,7 +116,9 @@ async fn main() -> io::Result<()> {
                         } else if app.input.starts_with("/rephrase") {
                             (app.input.clone(), operations::REPHRASE, false)
                         } else if app.input.starts_with("/thesaurus") {
-                            (app.input.clone(), operations::THESAURUS, false)
+                            (app.input.clone(), operations::THESAURUS, true)
+                        } else if app.input.starts_with("/overuse") {
+                            (app.input.clone(), operations::OVERUSE, true)
                         } else if !app.input.is_empty() {
                             (app.input.clone(), operations::GRAMMAR, false)
                         } else {
@@ -177,7 +182,7 @@ async fn main() -> io::Result<()> {
                                         });
                                     }
 
-                                    // Show alternatives (for Rephrase and similar)
+                                    // Show alternatives
                                     if !response.alternatives.is_empty() {
                                         for (i, alt) in response.alternatives.iter().enumerate() {
                                             app.conversation.push(Message {
@@ -185,11 +190,14 @@ async fn main() -> io::Result<()> {
                                                 content: format!("[{}] {}", i + 1, alt),
                                             });
                                         }
-                                        app.enter_select_alternative(
-                                            response.alternatives.clone(),
-                                            selected_idx,
-                                        );
-                                    } else if response.result.mode != ResponseMode::Critique
+                                        // Only enter selection mode for non-informative ops (Rephrase)
+                                        if !is_informative {
+                                            app.enter_select_alternative(
+                                                response.alternatives.clone(),
+                                                selected_idx,
+                                            );
+                                        }
+                                    } else if !is_informative
                                         && !response.result.text.is_empty()
                                     {
                                         let suggestion = response.to_suggestion(selected_paragraph);
@@ -217,7 +225,7 @@ async fn main() -> io::Result<()> {
                                 content: suggestion.explanation.clone(),
                             });
 
-                            if !is_critique {
+                            if !is_informative {
                                 app.enter_review(suggestion, selected_idx);
                             }
                         }
