@@ -240,7 +240,7 @@ async fn main() -> io::Result<()> {
                 },
                 AppMode::Edit { .. } => match key.code {
                     KeyCode::Esc => app.cancel_edit(),
-                    KeyCode::Enter if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                    KeyCode::Char('s') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
                         app.accept_edit();
                     }
                     _ => {
