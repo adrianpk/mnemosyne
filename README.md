@@ -29,7 +29,3 @@ Early. Very early. Two panels on a screen and a lot of curiosity.
 ```bash
 cargo run -- path/to/document.md
 ```
-
-## License
-
-MIT
