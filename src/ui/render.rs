@@ -42,7 +42,15 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
     match &app.mode {
         AppMode::Normal => {
             let input_style = Style::default().fg(Color::Cyan);
-            lines.push(Line::from(Span::styled(format!("> {}_", app.input), input_style)));
+            if app.input.is_empty() {
+                let hint_style = Style::default().fg(Color::DarkGray);
+                lines.push(Line::from(vec![
+                    Span::styled("> _", input_style),
+                    Span::styled("  [e] edit the paragraph", hint_style),
+                ]));
+            } else {
+                lines.push(Line::from(Span::styled(format!("> {}_", app.input), input_style)));
+            }
         }
         AppMode::Review { .. } => {
             let hint_style = Style::default().fg(Color::Yellow);
@@ -65,9 +73,34 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
         }
     }
 
+    // Calculate scroll
+    let panel_height = area.height.saturating_sub(2) as usize; // minus borders
+    let panel_width = area.width.saturating_sub(2) as usize;
+
+    // Estimate total lines (accounting for wrap)
+    let total_lines: usize = lines.iter().map(|line| {
+        let len = line.width();
+        if panel_width > 0 && len > panel_width {
+            (len / panel_width) + 1
+        } else {
+            1
+        }
+    }).sum();
+
+    // Auto-scroll to bottom, but allow manual scroll up via conversation_scroll
+    let max_scroll = total_lines.saturating_sub(panel_height);
+    let scroll = if app.conversation_scroll == 0 {
+        // Auto-scroll: show most recent
+        max_scroll as u16
+    } else {
+        // Manual scroll: offset from bottom
+        max_scroll.saturating_sub(app.conversation_scroll) as u16
+    };
+
     let conversation = Paragraph::new(lines)
         .block(Block::default().title("Conversation").borders(Borders::ALL))
-        .wrap(Wrap { trim: false });
+        .wrap(Wrap { trim: false })
+        .scroll((scroll, 0));
     frame.render_widget(conversation, *area);
 }
 
@@ -137,7 +170,10 @@ fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             }
 
             // Normal view
-            let style = if i == app.document.selected && review_info.is_none() {
+            let style = if app.highlight_all {
+                // Full-document operation: highlight all paragraphs
+                Style::default().add_modifier(Modifier::REVERSED)
+            } else if i == app.document.selected && review_info.is_none() {
                 Style::default().add_modifier(Modifier::REVERSED)
             } else {
                 Style::default()

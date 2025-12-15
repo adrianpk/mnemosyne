@@ -15,7 +15,7 @@ pub const FUNCTION_KEYS: &[FunctionKey] = &[
     FunctionKey { key: " F1 ", label: " Help " },
     FunctionKey { key: " F2 ", label: " Open " },
     FunctionKey { key: " F3 ", label: " Crit " },
-    FunctionKey { key: " F4 ", label: " Summ " },
+    FunctionKey { key: " F4 ", label: " Reps " },
     FunctionKey { key: " F5 ", label: " Styl " },
     FunctionKey { key: " F6 ", label: " Gram " },
     FunctionKey { key: " F7 ", label: " Reph " },
