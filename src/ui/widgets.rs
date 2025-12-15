@@ -13,7 +13,7 @@ pub struct FunctionKey {
 
 pub const FUNCTION_KEYS: &[FunctionKey] = &[
     FunctionKey { key: " F1 ", label: " Help " },
-    FunctionKey { key: " F2 ", label: " Open " },
+    FunctionKey { key: " F2 ", label: " Save " },
     FunctionKey { key: " F3 ", label: " Crit " },
     FunctionKey { key: " F4 ", label: " Reps " },
     FunctionKey { key: " F5 ", label: " Styl " },
@@ -24,6 +24,7 @@ pub const FUNCTION_KEYS: &[FunctionKey] = &[
     FunctionKey { key: " F10 ", label: " Echo " },
     FunctionKey { key: " F11 ", label: " Exit " },
     FunctionKey { key: " F12 ", label: " Conf " },
+    FunctionKey { key: " ^E ", label: " Edit " },
 ];
 
 pub fn render_function_bar(frame: &mut Frame, area: Rect) {

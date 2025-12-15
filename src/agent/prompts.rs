@@ -388,8 +388,15 @@ What you MUST NOT do:
 Output rules for this operation:
 - result.mode MUST be "suggest"
 - result.text MUST be empty
-- alternatives MUST be empty
+- alternatives MUST contain the repeated terms (just the words, no counts)
 - comments should list each repeated item with its count, e.g.: "'word' (3x)", "'expression' (2x)"
+- alternatives and comments MUST be in the same order (alternatives[0] corresponds to comments[0])
+
+Example output:
+{
+  "alternatives": ["rain", "wind", "café"],
+  "comments": ["'rain' (3x)", "'wind' (2x)", "'café' (2x)"]
+}
 
 Return your response strictly using the agreed JSON output format."#;
 
@@ -439,8 +446,15 @@ Editorial stance:
 Output rules for this operation:
 - result.mode MUST be "suggest"
 - result.text MUST be empty
-- alternatives MUST be empty
-- comments should note each echo with location, e.g.: "'word' appears twice in same sentence", "'X' at end of paragraph 2, 'X' at start of paragraph 3"
+- alternatives MUST contain the echoed terms (just the words)
+- comments should note each echo with location, e.g.: "'word' appears twice in same sentence"
+- alternatives and comments MUST be in the same order (alternatives[0] corresponds to comments[0])
+
+Example output:
+{
+  "alternatives": ["rain", "drunk"],
+  "comments": ["'rain' appears twice in same sentence", "'drunk' repeated in adjacent sentences"]
+}
 
 Return your response strictly using the agreed JSON output format."#;
 

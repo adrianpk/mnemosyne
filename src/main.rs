@@ -92,7 +92,7 @@ async fn main() -> io::Result<()> {
                     KeyCode::PageDown => {
                         app.conversation_scroll = app.conversation_scroll.saturating_sub(5);
                     }
-                    KeyCode::Char('e') if app.input.is_empty() => {
+                    KeyCode::Char('e') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
                         app.enter_edit();
                     }
                     KeyCode::Char(c) => app.input.push(c),
@@ -102,40 +102,41 @@ async fn main() -> io::Result<()> {
                     KeyCode::Enter | KeyCode::F(3) | KeyCode::F(4) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) | KeyCode::F(9) | KeyCode::F(10) => {
                         // is_informative: operations that don't auto-apply
                         // is_full_doc: operations that analyze the entire document
-                        let (user_input, operation_prompt, is_informative, is_full_doc) = if key.code == KeyCode::F(3) {
-                            (String::from("/critique"), operations::CRITIQUE, true, true)
+                        // is_browse: operations that enter BrowseRepeats mode (Repeats, Echoes)
+                        let (user_input, operation_prompt, is_informative, is_full_doc, is_browse) = if key.code == KeyCode::F(3) {
+                            (String::from("/critique"), operations::CRITIQUE, true, true, false)
                         } else if key.code == KeyCode::F(4) {
-                            (String::from("/repeats"), operations::REPEATS, true, true)
+                            (String::from("/repeats"), operations::REPEATS, true, true, true)
                         } else if key.code == KeyCode::F(5) {
-                            (String::from("/style"), operations::STYLE, false, false)
+                            (String::from("/style"), operations::STYLE, false, false, false)
                         } else if key.code == KeyCode::F(6) {
-                            (String::from("/grammar"), operations::GRAMMAR, false, false)
+                            (String::from("/grammar"), operations::GRAMMAR, false, false, false)
                         } else if key.code == KeyCode::F(7) {
-                            (String::from("/rephrase"), operations::REPHRASE, false, false)
+                            (String::from("/rephrase"), operations::REPHRASE, false, false, false)
                         } else if key.code == KeyCode::F(8) {
-                            (String::from("/thesaurus"), operations::THESAURUS, true, false)
+                            (String::from("/thesaurus"), operations::THESAURUS, true, false, false)
                         } else if key.code == KeyCode::F(9) {
-                            (String::from("/overuse"), operations::OVERUSE, true, false)
+                            (String::from("/overuse"), operations::OVERUSE, true, false, false)
                         } else if key.code == KeyCode::F(10) {
-                            (String::from("/echoes"), operations::ECHOES, true, true)
+                            (String::from("/echoes"), operations::ECHOES, true, true, true)
                         } else if app.input.starts_with("/critique") {
-                            (app.input.clone(), operations::CRITIQUE, true, true)
+                            (app.input.clone(), operations::CRITIQUE, true, true, false)
                         } else if app.input.starts_with("/repeats") {
-                            (app.input.clone(), operations::REPEATS, true, true)
+                            (app.input.clone(), operations::REPEATS, true, true, true)
                         } else if app.input.starts_with("/style") {
-                            (app.input.clone(), operations::STYLE, false, false)
+                            (app.input.clone(), operations::STYLE, false, false, false)
                         } else if app.input.starts_with("/grammar") {
-                            (app.input.clone(), operations::GRAMMAR, false, false)
+                            (app.input.clone(), operations::GRAMMAR, false, false, false)
                         } else if app.input.starts_with("/rephrase") {
-                            (app.input.clone(), operations::REPHRASE, false, false)
+                            (app.input.clone(), operations::REPHRASE, false, false, false)
                         } else if app.input.starts_with("/thesaurus") {
-                            (app.input.clone(), operations::THESAURUS, true, false)
+                            (app.input.clone(), operations::THESAURUS, true, false, false)
                         } else if app.input.starts_with("/overuse") {
-                            (app.input.clone(), operations::OVERUSE, true, false)
+                            (app.input.clone(), operations::OVERUSE, true, false, false)
                         } else if app.input.starts_with("/echoes") {
-                            (app.input.clone(), operations::ECHOES, true, true)
+                            (app.input.clone(), operations::ECHOES, true, true, true)
                         } else if !app.input.is_empty() {
-                            (app.input.clone(), operations::GRAMMAR, false, false)
+                            (app.input.clone(), operations::GRAMMAR, false, false, false)
                         } else {
                             continue;
                         };
@@ -206,34 +207,45 @@ async fn main() -> io::Result<()> {
 
                             match response {
                                 Ok(response) => {
-                                    // Show comments
-                                    for comment in &response.comments {
-                                        app.conversation.push(Message {
-                                            role: Role::Assistant,
-                                            content: comment.clone(),
-                                        });
-                                    }
-
-                                    // Show alternatives
-                                    if !response.alternatives.is_empty() {
-                                        for (i, alt) in response.alternatives.iter().enumerate() {
+                                    if is_browse && !response.alternatives.is_empty() {
+                                        // Browse mode: show comments labeled for selection (1-9, a-z)
+                                        for (i, comment) in response.comments.iter().enumerate() {
                                             app.conversation.push(Message {
                                                 role: Role::Assistant,
-                                                content: format!("[{}] {}", i + 1, alt),
+                                                content: format!("[{}] {}", crate::document::index_label(i), comment),
                                             });
                                         }
-                                        // Only enter selection mode for non-informative ops (Rephrase)
-                                        if !is_informative {
-                                            app.enter_select_alternative(
-                                                response.alternatives.clone(),
-                                                selected_idx,
-                                            );
+                                        app.enter_browse_repeats(response.alternatives.clone());
+                                    } else {
+                                        // Show comments normally
+                                        for comment in &response.comments {
+                                            app.conversation.push(Message {
+                                                role: Role::Assistant,
+                                                content: comment.clone(),
+                                            });
                                         }
-                                    } else if !is_informative
-                                        && !response.result.text.is_empty()
-                                    {
-                                        let suggestion = response.to_suggestion(&app.document.paragraphs[selected_idx]);
-                                        app.enter_review(suggestion, selected_idx);
+
+                                        // Show alternatives
+                                        if !response.alternatives.is_empty() {
+                                            for (i, alt) in response.alternatives.iter().enumerate() {
+                                                app.conversation.push(Message {
+                                                    role: Role::Assistant,
+                                                    content: format!("[{}] {}", i + 1, alt),
+                                                });
+                                            }
+                                            // Only enter selection mode for non-informative ops (Rephrase)
+                                            if !is_informative {
+                                                app.enter_select_alternative(
+                                                    response.alternatives.clone(),
+                                                    selected_idx,
+                                                );
+                                            }
+                                        } else if !is_informative
+                                            && !response.result.text.is_empty()
+                                        {
+                                            let suggestion = response.to_suggestion(&app.document.paragraphs[selected_idx]);
+                                            app.enter_review(suggestion, selected_idx);
+                                        }
                                     }
                                 }
                                 Err(e) => {
@@ -290,6 +302,24 @@ async fn main() -> io::Result<()> {
                             editor.input(key);
                         }
                     }
+                },
+                AppMode::BrowseRepeats { .. } => match key.code {
+                    KeyCode::Char('e') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        // Edit the currently selected paragraph
+                        app.exit_browse_repeats();
+                        app.enter_edit();
+                    }
+                    KeyCode::Char(c) if c.is_ascii_digit() || c.is_ascii_lowercase() => {
+                        // Use label_to_index for 1-9, a-z
+                        if let Some(idx) = crate::document::label_to_index(c) {
+                            app.highlight_term(idx + 1); // highlight_term expects 1-based
+                        }
+                    }
+                    KeyCode::Esc => app.exit_browse_repeats(),
+                    // Allow navigation while browsing
+                    KeyCode::Down => app.document.select_next(),
+                    KeyCode::Up => app.document.select_prev(),
+                    _ => {}
                 },
             }
         }
