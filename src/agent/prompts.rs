@@ -115,7 +115,66 @@ Return your response strictly using the agreed JSON output format."#;
 
     pub const REPHRASE: &str = "Operation: Rephrase\n\nRephrase the following text for improved clarity and flow.\n\nReturn your response strictly using the agreed JSON output format.";
 
-    pub const STYLE: &str = "Operation: Style\n\nAnalyze the style of the following text and suggest improvements.\n\nReturn your response strictly using the agreed JSON output format.";
+    /// Style operation — canonical definition.
+    ///
+    /// Intent: Evaluate and improve the stylistic quality of the text while
+    /// preserving the author's voice, intent, and register. Focus on clarity,
+    /// tone, flow, and stylistic consistency without altering meaning or
+    /// structure unnecessarily.
+    ///
+    /// Style is corrective and refining, not creative.
+    ///
+    /// Output contract:
+    /// - result.mode = "replace"
+    /// - result.text = stylistically improved version (or original if no improvement)
+    /// - alternatives = optional stylistic variants
+    /// - comments = optional stylistic notes
+    pub const STYLE: &str = r#"Operation: Style
+
+You are performing professional stylistic editing.
+
+Evaluate and improve the stylistic quality of the text while preserving
+the author's voice, intent, and register.
+Focus on clarity, tone, flow, and stylistic consistency without altering
+meaning or structure unnecessarily.
+
+Style is corrective and refining, not creative.
+
+Scope:
+- Allowed: Single paragraph, full document
+- Not allowed: Sentence fragments, token-level micro-optimizations
+
+Editorial stance:
+- Preserve the author's voice
+- Favor clarity over flourish
+- Be restrained and intentional
+- Intervene only when there is a clear stylistic gain
+
+What you MUST do:
+- Identify and correct awkward or unclear phrasing
+- Identify and correct stylistic inconsistencies
+- Reduce excessive complexity or verbosity
+- Improve flat or mechanical sentence flow
+- Fix register mismatches (formal vs informal drift)
+- Improve readability and coherence at sentence and paragraph level
+- Maintain meaning and factual content exactly
+
+What you MUST NOT do:
+- Do NOT change the author's intent
+- Do NOT add or remove ideas
+- Do NOT restructure the argument or narrative
+- Do NOT introduce stylistic flair for its own sake
+- Do NOT correct grammar beyond what is required for stylistic clarity
+  (pure grammar belongs to Grammar operation)
+
+Output rules for this operation:
+- result.mode MUST be "replace"
+- result.text contains the stylistically improved version
+- If no meaningful improvement is possible, result.text MUST equal the original input verbatim
+- alternatives are optional and must be stylistic, not conceptual
+- comments are optional and must be concise
+
+Return your response strictly using the agreed JSON output format."#;
 
     pub const SUMMARY: &str = "Operation: Summary\n\nSummarize the following text concisely.\n\nReturn your response strictly using the agreed JSON output format.";
 
