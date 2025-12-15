@@ -110,9 +110,17 @@ async fn main() -> io::Result<()> {
                             role: Role::User,
                             content: user_input.clone(),
                         });
+                        app.conversation.push(Message {
+                            role: Role::Assistant,
+                            content: String::from("Thinking..."),
+                        });
+                        terminal.draw(|frame| ui::draw(frame, &app))?;
 
                         let selected_idx = app.document.selected;
                         let selected_paragraph = &app.document.paragraphs[selected_idx];
+
+                        // Remove "Thinking..." before adding real response
+                        app.conversation.pop();
 
                         if let Some(ref agent) = llm_agent {
                             let prompt = Prompt::new(
