@@ -168,14 +168,18 @@ async fn main() -> io::Result<()> {
                                     }
 
                                     // Show alternatives (for Rephrase and similar)
-                                    for (i, alt) in response.alternatives.iter().enumerate() {
-                                        app.conversation.push(Message {
-                                            role: Role::Assistant,
-                                            content: format!("[{}] {}", i + 1, alt),
-                                        });
-                                    }
-
-                                    if response.result.mode != ResponseMode::Critique
+                                    if !response.alternatives.is_empty() {
+                                        for (i, alt) in response.alternatives.iter().enumerate() {
+                                            app.conversation.push(Message {
+                                                role: Role::Assistant,
+                                                content: format!("[{}] {}", i + 1, alt),
+                                            });
+                                        }
+                                        app.enter_select_alternative(
+                                            response.alternatives.clone(),
+                                            selected_idx,
+                                        );
+                                    } else if response.result.mode != ResponseMode::Critique
                                         && !response.result.text.is_empty()
                                     {
                                         let suggestion = response.to_suggestion(selected_paragraph);
@@ -213,6 +217,15 @@ async fn main() -> io::Result<()> {
                 AppMode::Review { .. } => match key.code {
                     KeyCode::Enter => app.accept_suggestion(),
                     KeyCode::Esc => app.reject_suggestion(),
+                    _ => {}
+                },
+                AppMode::SelectAlternative { .. } => match key.code {
+                    KeyCode::Char(c) if c.is_ascii_digit() => {
+                        if let Some(choice) = c.to_digit(10) {
+                            app.apply_alternative(choice as usize);
+                        }
+                    }
+                    KeyCode::Esc => app.cancel_select_alternative(),
                     _ => {}
                 },
             }

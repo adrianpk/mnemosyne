@@ -51,6 +51,11 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App, area: &Rect) {
                 hint_style,
             )));
         }
+        AppMode::SelectAlternative { alternatives, .. } => {
+            let hint_style = Style::default().fg(Color::Yellow);
+            let hint = format!("[1-{}] Apply  [Esc] Cancel", alternatives.len());
+            lines.push(Line::from(Span::styled(hint, hint_style)));
+        }
     }
 
     let conversation = Paragraph::new(lines)
@@ -62,7 +67,7 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App, area: &Rect) {
 fn draw_document_panel(frame: &mut Frame, app: &App, area: &Rect) {
     let review_info = match &app.mode {
         AppMode::Review { suggestion, paragraph_index } => Some((suggestion, *paragraph_index)),
-        AppMode::Normal => None,
+        _ => None,
     };
 
     let doc_lines: Vec<Line> = app

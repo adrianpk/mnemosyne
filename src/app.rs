@@ -19,6 +19,11 @@ pub enum AppMode {
         suggestion: Suggestion,
         paragraph_index: usize,
     },
+    /// Waiting for user to select an alternative (1, 2, 3...)
+    SelectAlternative {
+        alternatives: Vec<String>,
+        paragraph_index: usize,
+    },
 }
 
 pub struct App {
@@ -80,6 +85,38 @@ impl App {
             self.conversation.push(Message {
                 role: Role::Assistant,
                 content: String::from("Change discarded."),
+            });
+        }
+        self.mode = AppMode::Normal;
+    }
+
+    pub fn enter_select_alternative(&mut self, alternatives: Vec<String>, paragraph_index: usize) {
+        self.mode = AppMode::SelectAlternative {
+            alternatives,
+            paragraph_index,
+        };
+    }
+
+    pub fn apply_alternative(&mut self, choice: usize) -> bool {
+        if let AppMode::SelectAlternative { alternatives, paragraph_index } = &self.mode {
+            if choice > 0 && choice <= alternatives.len() {
+                self.document.paragraphs[*paragraph_index] = alternatives[choice - 1].clone();
+                self.conversation.push(Message {
+                    role: Role::Assistant,
+                    content: format!("Applied alternative [{}].", choice),
+                });
+                self.mode = AppMode::Normal;
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn cancel_select_alternative(&mut self) {
+        if let AppMode::SelectAlternative { .. } = &self.mode {
+            self.conversation.push(Message {
+                role: Role::Assistant,
+                content: String::from("Selection cancelled."),
             });
         }
         self.mode = AppMode::Normal;
