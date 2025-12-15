@@ -139,12 +139,16 @@ impl<'a> App<'a> {
         let paragraph_index = self.document.selected;
         let original = self.document.paragraphs[paragraph_index].clone();
 
+        // Split text into sentences for easier editing
+        let sentences = split_into_sentences(&original);
+        let formatted = sentences.join("\n");
+
         let mut textarea = TextArea::default();
-        textarea.insert_str(&original);
+        textarea.insert_str(&formatted);
         textarea.set_block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("Edit (Ctrl+Enter to apply)")
+                .title("Edit (Ctrl+S to apply)")
         );
         textarea.set_cursor_line_style(Style::default());
         textarea.set_style(Style::default().fg(Color::Rgb(187, 154, 247))); // purple like suggestions
@@ -159,7 +163,8 @@ impl<'a> App<'a> {
     pub fn accept_edit(&mut self) {
         if let AppMode::Edit { paragraph_index, .. } = &self.mode {
             if let Some(editor) = &self.editor {
-                let new_text = editor.lines().join("\n");
+                // Join lines back with spaces (sentences were split by newlines)
+                let new_text = editor.lines().join(" ");
                 self.document.paragraphs[*paragraph_index] = new_text;
                 self.conversation.push(Message {
                     role: Role::Assistant,
@@ -185,4 +190,40 @@ impl<'a> App<'a> {
 
 fn default_system_prompt() -> String {
     prompts::system_prompt()
+}
+
+/// Split text into sentences for line-by-line editing.
+/// Uses simple heuristics: split on ". ", "? ", "! " followed by uppercase or end of string.
+fn split_into_sentences(text: &str) -> Vec<String> {
+    let mut sentences = Vec::new();
+    let mut current = String::new();
+    let chars: Vec<char> = text.chars().collect();
+    let len = chars.len();
+
+    let mut i = 0;
+    while i < len {
+        current.push(chars[i]);
+
+        // Check for sentence endings
+        if (chars[i] == '.' || chars[i] == '?' || chars[i] == '!') && i + 1 < len {
+            // Look ahead for space followed by uppercase (or end)
+            if chars[i + 1] == ' ' {
+                if i + 2 < len && chars[i + 2].is_uppercase() {
+                    // End of sentence - include the period but not the space
+                    sentences.push(current.trim().to_string());
+                    current = String::new();
+                    i += 2; // Skip the space, next iteration starts at uppercase
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+
+    // Don't forget the last sentence
+    if !current.trim().is_empty() {
+        sentences.push(current.trim().to_string());
+    }
+
+    sentences
 }

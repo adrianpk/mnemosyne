@@ -59,7 +59,7 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
         AppMode::Edit { .. } => {
             let hint_style = Style::default().fg(Color::Yellow);
             lines.push(Line::from(Span::styled(
-                "[Ctrl+Enter] Apply  [Esc] Cancel",
+                "Editing — [Ctrl+S] Save  [Esc] Cancel",
                 hint_style,
             )));
         }
