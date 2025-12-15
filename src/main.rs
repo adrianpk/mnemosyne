@@ -87,7 +87,7 @@ async fn main() -> io::Result<()> {
                     KeyCode::Backspace => {
                         app.input.pop();
                     }
-                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) => {
+                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) => {
                         let (user_input, operation_prompt, is_critique) = if key.code == KeyCode::F(3) {
                             (String::from("/critique"), operations::CRITIQUE, true)
                         } else if key.code == KeyCode::F(5) {
@@ -96,6 +96,8 @@ async fn main() -> io::Result<()> {
                             (String::from("/grammar"), operations::GRAMMAR, false)
                         } else if key.code == KeyCode::F(7) {
                             (String::from("/rephrase"), operations::REPHRASE, false)
+                        } else if key.code == KeyCode::F(8) {
+                            (String::from("/thesaurus"), operations::THESAURUS, false)
                         } else if app.input.starts_with("/critique") {
                             (app.input.clone(), operations::CRITIQUE, true)
                         } else if app.input.starts_with("/style") {
@@ -104,6 +106,8 @@ async fn main() -> io::Result<()> {
                             (app.input.clone(), operations::GRAMMAR, false)
                         } else if app.input.starts_with("/rephrase") {
                             (app.input.clone(), operations::REPHRASE, false)
+                        } else if app.input.starts_with("/thesaurus") {
+                            (app.input.clone(), operations::THESAURUS, false)
                         } else if !app.input.is_empty() {
                             (app.input.clone(), operations::GRAMMAR, false)
                         } else {
