@@ -5,7 +5,26 @@ pub mod prompts;
 pub use mock::MockAgent;
 pub use llm::{LLMAgent, LLMError, LLMProvider, OpenAIProvider};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Deserialize a field that can be either a string or an array of strings.
+fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrVec {
+        String(String),
+        Vec(Vec<String>),
+    }
+
+    match StringOrVec::deserialize(deserializer)? {
+        StringOrVec::String(s) if s.is_empty() => Ok(Vec::new()),
+        StringOrVec::String(s) => Ok(vec![s]),
+        StringOrVec::Vec(v) => Ok(v),
+    }
+}
 
 // LLM Response Contract 
 
@@ -41,9 +60,9 @@ pub struct Notes {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LLMResponse {
     pub result: ResultBlock,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "string_or_vec")]
     pub alternatives: Vec<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "string_or_vec")]
     pub comments: Vec<String>,
     pub notes: Notes,
 }
