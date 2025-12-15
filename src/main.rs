@@ -6,6 +6,7 @@ mod ui;
 use std::env;
 use std::io;
 use std::path::Path;
+use std::time::Duration;
 
 use crossterm::{
     ExecutableCommand,
@@ -110,17 +111,9 @@ async fn main() -> io::Result<()> {
                             role: Role::User,
                             content: user_input.clone(),
                         });
-                        app.conversation.push(Message {
-                            role: Role::Assistant,
-                            content: String::from("Thinking..."),
-                        });
-                        terminal.draw(|frame| ui::draw(frame, &app))?;
 
                         let selected_idx = app.document.selected;
                         let selected_paragraph = &app.document.paragraphs[selected_idx];
-
-                        // Remove "Thinking..." before adding real response
-                        app.conversation.pop();
 
                         if let Some(ref agent) = llm_agent {
                             let prompt = Prompt::new(
@@ -129,9 +122,39 @@ async fn main() -> io::Result<()> {
                                 selected_paragraph,
                             );
 
-                            match agent.send(&prompt).await {
+                            // Animated "Thinking" indicator
+                            let dots = ["Thinking", "Thinking.", "Thinking..", "Thinking..."];
+                            let mut dot_idx = 0;
+                            app.conversation.push(Message {
+                                role: Role::Assistant,
+                                content: String::from(dots[dot_idx]),
+                            });
+                            terminal.draw(|frame| ui::draw(frame, &app))?;
+
+                            let llm_future = agent.send(&prompt);
+                            tokio::pin!(llm_future);
+
+                            let mut ticker = tokio::time::interval(Duration::from_millis(300));
+                            ticker.tick().await; // First tick is immediate
+
+                            let response = loop {
+                                tokio::select! {
+                                    result = &mut llm_future => break result,
+                                    _ = ticker.tick() => {
+                                        dot_idx = (dot_idx + 1) % dots.len();
+                                        if let Some(msg) = app.conversation.last_mut() {
+                                            msg.content = String::from(dots[dot_idx]);
+                                        }
+                                        terminal.draw(|frame| ui::draw(frame, &app))?;
+                                    }
+                                }
+                            };
+
+                            // Remove "Thinking..."
+                            app.conversation.pop();
+
+                            match response {
                                 Ok(response) => {
-                                    // NOTE: how comments in conversation
                                     for comment in &response.comments {
                                         app.conversation.push(Message {
                                             role: Role::Assistant,
@@ -139,7 +162,6 @@ async fn main() -> io::Result<()> {
                                         });
                                     }
 
-                                    // NOTE: Only enter review mode if there's replacement text
                                     if response.result.mode != ResponseMode::Critique
                                         && !response.result.text.is_empty()
                                     {
