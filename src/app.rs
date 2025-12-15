@@ -41,6 +41,10 @@ pub struct App<'a> {
     pub system_prompt: String,
     pub mode: AppMode,
     pub editor: Option<TextArea<'a>>,
+    /// When true, all paragraphs are highlighted (full-document operations)
+    pub highlight_all: bool,
+    /// Scroll offset for conversation panel (0 = auto-scroll to bottom)
+    pub conversation_scroll: usize,
 }
 
 impl<'a> App<'a> {
@@ -53,6 +57,8 @@ impl<'a> App<'a> {
             system_prompt: default_system_prompt(),
             mode: AppMode::Normal,
             editor: None,
+            highlight_all: false,
+            conversation_scroll: 0,
         }
     }
 
@@ -65,6 +71,8 @@ impl<'a> App<'a> {
             system_prompt: default_system_prompt(),
             mode: AppMode::Normal,
             editor: None,
+            highlight_all: false,
+            conversation_scroll: 0,
         })
     }
 

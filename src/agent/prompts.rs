@@ -344,6 +344,106 @@ Output rules for this operation:
 
 Return your response strictly using the agreed JSON output format."#;
 
+    /// Repeats operation — canonical definition.
+    ///
+    /// Intent: Identify repeated words or short expressions across the text,
+    /// focusing on internal repetition regardless of distance. Analyzes repetition
+    /// as a global textual phenomenon, not stylistic weakness or cliché.
+    ///
+    /// Output contract:
+    /// - result.mode = "suggest"
+    /// - result.text = "" (empty)
+    /// - alternatives = [] (empty)
+    /// - comments = list of repeated items with occurrence counts
+    pub const REPEATS: &str = r#"Operation: All Repeats
+
+Create a global map of repeated words and expressions across the ENTIRE text.
+Think of this as an index or heatmap — distance does not matter.
+
+This operation provides visibility, not judgment.
+A word appearing in paragraph 1 and again in paragraph 12 is still a repeat.
+
+Do not evaluate stylistic quality.
+Do not propose rewrites.
+
+What you MUST do:
+- Scan the FULL document (all paragraphs)
+- Identify repeated CONTENT words (nouns, verbs, adjectives, adverbs)
+- Identify repeated short expressions (2-4 words)
+- Report occurrence count for each
+- This helps detect: tics, dominant themes, unconscious crutch words, vocabulary patterns
+
+What to EXCLUDE (do NOT report these):
+- Articles: the, a, an
+- Prepositions: of, in, on, at, to, for, with, from, by, etc.
+- Pronouns: I, you, he, she, it, we, they, etc.
+- Conjunctions: and, but, or, so, yet, etc.
+- Common auxiliaries: was, were, had, have, would, could, etc.
+
+What you MUST NOT do:
+- Do NOT judge whether repetition is good or bad
+- Do NOT suggest replacements
+- Do NOT comment on proximity (Echoes handles that)
+
+Output rules for this operation:
+- result.mode MUST be "suggest"
+- result.text MUST be empty
+- alternatives MUST be empty
+- comments should list each repeated item with its count, e.g.: "'word' (3x)", "'expression' (2x)"
+
+Return your response strictly using the agreed JSON output format."#;
+
+    /// Echoes operation — canonical definition.
+    ///
+    /// Intent: Detect repetitions that occur in close proximity, where repetition
+    /// may affect flow or readability. Distance-based, not frequency-based.
+    ///
+    /// Output contract:
+    /// - result.mode = "suggest"
+    /// - result.text = "" (empty)
+    /// - alternatives = [] (empty)
+    /// - comments = repeated items with proximity information
+    pub const ECHOES: &str = r#"Operation: Echoes
+
+Detect repeated words at CLOSE DISTANCES — where the reader will notice.
+This is perceptual, not statistical. It's about rhythm and reading friction.
+
+Scan the FULL document but only flag proximity-based repetition:
+- Same sentence
+- Adjacent sentences
+- Same paragraph
+- Adjacent paragraphs (end of one → start of next)
+
+The key question: "Will the reader think: didn't I just read this?"
+
+Do not judge repetition as inherently wrong.
+Do not propose rewrites.
+
+What you MUST do:
+- Scan the FULL document (all paragraphs)
+- Detect words/expressions appearing within short textual distance
+- Include echoes that CROSS paragraph boundaries
+- Indicate WHERE the echo occurs (same sentence, adjacent paragraphs, etc.)
+
+What you MUST NOT do:
+- Do NOT report frequency counts (Repeats handles that)
+- Do NOT flag repetition that is well-spaced
+- Do NOT suggest replacements
+- Do NOT rewrite text
+
+Editorial stance:
+- Proximity matters, not total count
+- Surface friction points, not errors
+- A word appearing twice in the whole text CAN be an echo if both are close together
+
+Output rules for this operation:
+- result.mode MUST be "suggest"
+- result.text MUST be empty
+- alternatives MUST be empty
+- comments should note each echo with location, e.g.: "'word' appears twice in same sentence", "'X' at end of paragraph 2, 'X' at start of paragraph 3"
+
+Return your response strictly using the agreed JSON output format."#;
+
     /// Overuse operation — canonical definition.
     ///
     /// Intent: Identify words, expressions, or phrases that are overused at a

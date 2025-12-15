@@ -86,6 +86,12 @@ async fn main() -> io::Result<()> {
                     }
                     KeyCode::Down => app.document.select_next(),
                     KeyCode::Up => app.document.select_prev(),
+                    KeyCode::PageUp => {
+                        app.conversation_scroll = app.conversation_scroll.saturating_add(5);
+                    }
+                    KeyCode::PageDown => {
+                        app.conversation_scroll = app.conversation_scroll.saturating_sub(5);
+                    }
                     KeyCode::Char('e') if app.input.is_empty() => {
                         app.enter_edit();
                     }
@@ -93,34 +99,43 @@ async fn main() -> io::Result<()> {
                     KeyCode::Backspace => {
                         app.input.pop();
                     }
-                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) | KeyCode::F(9) => {
-                        // is_informative: operations that don't auto-apply (Critique, Thesaurus, Overuse)
-                        let (user_input, operation_prompt, is_informative) = if key.code == KeyCode::F(3) {
-                            (String::from("/critique"), operations::CRITIQUE, true)
+                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(4) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) | KeyCode::F(9) | KeyCode::F(10) => {
+                        // is_informative: operations that don't auto-apply
+                        // is_full_doc: operations that analyze the entire document
+                        let (user_input, operation_prompt, is_informative, is_full_doc) = if key.code == KeyCode::F(3) {
+                            (String::from("/critique"), operations::CRITIQUE, true, true)
+                        } else if key.code == KeyCode::F(4) {
+                            (String::from("/repeats"), operations::REPEATS, true, true)
                         } else if key.code == KeyCode::F(5) {
-                            (String::from("/style"), operations::STYLE, false)
+                            (String::from("/style"), operations::STYLE, false, false)
                         } else if key.code == KeyCode::F(6) {
-                            (String::from("/grammar"), operations::GRAMMAR, false)
+                            (String::from("/grammar"), operations::GRAMMAR, false, false)
                         } else if key.code == KeyCode::F(7) {
-                            (String::from("/rephrase"), operations::REPHRASE, false)
+                            (String::from("/rephrase"), operations::REPHRASE, false, false)
                         } else if key.code == KeyCode::F(8) {
-                            (String::from("/thesaurus"), operations::THESAURUS, true)
+                            (String::from("/thesaurus"), operations::THESAURUS, true, false)
                         } else if key.code == KeyCode::F(9) {
-                            (String::from("/overuse"), operations::OVERUSE, true)
+                            (String::from("/overuse"), operations::OVERUSE, true, false)
+                        } else if key.code == KeyCode::F(10) {
+                            (String::from("/echoes"), operations::ECHOES, true, true)
                         } else if app.input.starts_with("/critique") {
-                            (app.input.clone(), operations::CRITIQUE, true)
+                            (app.input.clone(), operations::CRITIQUE, true, true)
+                        } else if app.input.starts_with("/repeats") {
+                            (app.input.clone(), operations::REPEATS, true, true)
                         } else if app.input.starts_with("/style") {
-                            (app.input.clone(), operations::STYLE, false)
+                            (app.input.clone(), operations::STYLE, false, false)
                         } else if app.input.starts_with("/grammar") {
-                            (app.input.clone(), operations::GRAMMAR, false)
+                            (app.input.clone(), operations::GRAMMAR, false, false)
                         } else if app.input.starts_with("/rephrase") {
-                            (app.input.clone(), operations::REPHRASE, false)
+                            (app.input.clone(), operations::REPHRASE, false, false)
                         } else if app.input.starts_with("/thesaurus") {
-                            (app.input.clone(), operations::THESAURUS, true)
+                            (app.input.clone(), operations::THESAURUS, true, false)
                         } else if app.input.starts_with("/overuse") {
-                            (app.input.clone(), operations::OVERUSE, true)
+                            (app.input.clone(), operations::OVERUSE, true, false)
+                        } else if app.input.starts_with("/echoes") {
+                            (app.input.clone(), operations::ECHOES, true, true)
                         } else if !app.input.is_empty() {
-                            (app.input.clone(), operations::GRAMMAR, false)
+                            (app.input.clone(), operations::GRAMMAR, false, false)
                         } else {
                             continue;
                         };
@@ -131,14 +146,31 @@ async fn main() -> io::Result<()> {
                             content: user_input.clone(),
                         });
 
+                        // Reset scroll to auto (show new content)
+                        app.conversation_scroll = 0;
+
+                        // Highlight all paragraphs for full-doc operations
+                        if is_full_doc {
+                            app.highlight_all = true;
+                        }
+
                         let selected_idx = app.document.selected;
-                        let selected_paragraph = &app.document.paragraphs[selected_idx];
+                        // For full-doc operations, join all paragraphs
+                        let content = if is_full_doc {
+                            app.document.paragraphs.iter()
+                                .enumerate()
+                                .map(|(i, p)| format!("[{}] {}", i + 1, p))
+                                .collect::<Vec<_>>()
+                                .join("\n\n")
+                        } else {
+                            app.document.paragraphs[selected_idx].clone()
+                        };
 
                         if let Some(ref agent) = llm_agent {
                             let prompt = Prompt::new(
                                 &prompts::system_prompt(),
                                 operation_prompt,
-                                selected_paragraph,
+                                &content,
                             );
 
                             // Animated "Thinking" indicator
@@ -200,7 +232,7 @@ async fn main() -> io::Result<()> {
                                     } else if !is_informative
                                         && !response.result.text.is_empty()
                                     {
-                                        let suggestion = response.to_suggestion(selected_paragraph);
+                                        let suggestion = response.to_suggestion(&app.document.paragraphs[selected_idx]);
                                         app.enter_review(suggestion, selected_idx);
                                     }
                                 }
@@ -211,12 +243,14 @@ async fn main() -> io::Result<()> {
                                     });
                                 }
                             }
+                            // Reset highlight after full-doc operation
+                            app.highlight_all = false;
                         } else {
                             // Use mock agent
                             let prompt = Prompt::new(
                                 &app.system_prompt,
                                 &user_input,
-                                selected_paragraph,
+                                &content,
                             );
                             let suggestion = mock_agent.suggest(&prompt);
 
