@@ -344,5 +344,64 @@ Output rules for this operation:
 
 Return your response strictly using the agreed JSON output format."#;
 
-    pub const OVERUSE: &str = "Operation: Overuse\n\nIdentify overused words or phrases in the following text.\n\nReturn your response strictly using the agreed JSON output format.";
+    /// Overuse operation — canonical definition.
+    ///
+    /// Intent: Identify words, expressions, or phrases that are overused at a
+    /// general language level, regardless of how many times they appear in the text.
+    /// Overuse evaluates editorial fatigue in the language, not repetition within
+    /// the document. This operation highlights cliché or worn expressions, not redundancy.
+    ///
+    /// Output contract:
+    /// - result.mode = "suggest"
+    /// - result.text = "" (empty, never applies directly)
+    /// - alternatives = optional conservative suggestions
+    /// - comments = brief explanation of why expression is overused
+    pub const OVERUSE: &str = r#"Operation: Overuse
+
+Identify words or expressions that are overused or clichéd
+in general language usage, independent of repetition in the text.
+
+Do not analyze internal frequency.
+Do not rewrite sentences.
+Flag only when there is a clear editorial reason.
+
+What you MUST do:
+- Identify words or expressions that are commonly overused in general language
+- Identify editorially weak or worn expressions
+- Identify clichés in professional or academic contexts
+- Flag them even if they appear only once
+- Explain briefly why the expression is considered overused
+
+What you MUST NOT do:
+- Do NOT count or analyze repetition inside the text
+- Do NOT rewrite sentences
+- Do NOT impose stylistic preferences
+- Do NOT flag expressions that are appropriate or intentional in context
+
+Editorial stance:
+- Evaluate against general usage of the language, not the local text
+- Be selective and context-aware
+- Respect genre, register, and intent
+- Avoid pedantic or dogmatic judgments
+- This is editorial awareness, not correction
+
+Multilingual rules:
+- Evaluate overuse according to the detected primary language
+- Do not flag quoted text
+- Consider register and genre norms of that language
+
+Confidence heuristic:
+- high: widely recognized cliché or fatigued expression
+- medium: context-dependent or genre-sensitive overuse
+- low: borderline or debatable case
+
+Output rules for this operation:
+- result.mode MUST be "suggest"
+- result.text MUST be empty
+- For each flagged expression, provide a comment AND at least one alternative
+- alternatives should be conservative: improve precision, not novelty
+- Format each comment as: "'expression' → alt1, alt2 — explanation"
+- comments must focus on editorial fatigue, not grammar or style
+
+Return your response strictly using the agreed JSON output format."#;
 }
