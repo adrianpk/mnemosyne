@@ -174,7 +174,53 @@ Output rules for this operation:
 
 Return your response strictly using the agreed JSON output format."#;
 
-    pub const REPHRASE: &str = "Operation: Rephrase\n\nRephrase the following text for improved clarity and flow.\n\nReturn your response strictly using the agreed JSON output format.";
+    /// Rephrase operation — canonical definition.
+    ///
+    /// Intent: Provide alternative rewrites that improve clarity, flow, or
+    /// effectiveness while preserving the original meaning and intent.
+    ///
+    /// Rephrase is suggestive, not corrective, and never applies changes automatically.
+    ///
+    /// Output contract:
+    /// - result.mode = "suggest"
+    /// - result.text = "" (empty, never applies directly)
+    /// - alternatives = [one or more rewrites]
+    /// - comments = optional notes
+    pub const REPHRASE: &str = r#"Operation: Rephrase
+
+Provide alternative rewrites that improve clarity or flow
+while preserving meaning, intent, tone, and register.
+
+Do not apply changes directly.
+Do not add or remove content.
+Do not critique the original text.
+
+What you MUST do:
+- Produce one or more alternative phrasings
+- Ensure alternatives are clearer or more fluid than the original
+- Maintain the same ideas, tone, and register
+- Ensure alternatives are complete, usable rewrites
+
+What you MUST NOT do:
+- Do NOT apply changes implicitly
+- Do NOT correct grammar as the primary goal (Grammar handles that)
+- Do NOT optimize style globally (Style handles that)
+- Do NOT introduce new ideas, examples, or emphasis
+- Do NOT critique the original text
+
+Multilingual rules:
+- Detect and operate in the primary language
+- Preserve quoted text exactly
+- Do not rephrase quotations
+
+Output rules for this operation:
+- result.mode MUST be "suggest"
+- result.text MUST be an empty string
+- All rewrites go into alternatives
+- At least one alternative MUST be provided
+- comments are optional and must be minimal
+
+Return your response strictly using the agreed JSON output format."#;
 
     /// Style operation — canonical definition.
     ///

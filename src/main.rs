@@ -87,19 +87,23 @@ async fn main() -> io::Result<()> {
                     KeyCode::Backspace => {
                         app.input.pop();
                     }
-                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) => {
+                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) => {
                         let (user_input, operation_prompt, is_critique) = if key.code == KeyCode::F(3) {
                             (String::from("/critique"), operations::CRITIQUE, true)
                         } else if key.code == KeyCode::F(5) {
                             (String::from("/style"), operations::STYLE, false)
                         } else if key.code == KeyCode::F(6) {
                             (String::from("/grammar"), operations::GRAMMAR, false)
+                        } else if key.code == KeyCode::F(7) {
+                            (String::from("/rephrase"), operations::REPHRASE, false)
                         } else if app.input.starts_with("/critique") {
                             (app.input.clone(), operations::CRITIQUE, true)
                         } else if app.input.starts_with("/style") {
                             (app.input.clone(), operations::STYLE, false)
                         } else if app.input.starts_with("/grammar") {
                             (app.input.clone(), operations::GRAMMAR, false)
+                        } else if app.input.starts_with("/rephrase") {
+                            (app.input.clone(), operations::REPHRASE, false)
                         } else if !app.input.is_empty() {
                             (app.input.clone(), operations::GRAMMAR, false)
                         } else {
@@ -155,10 +159,19 @@ async fn main() -> io::Result<()> {
 
                             match response {
                                 Ok(response) => {
+                                    // Show comments
                                     for comment in &response.comments {
                                         app.conversation.push(Message {
                                             role: Role::Assistant,
                                             content: comment.clone(),
+                                        });
+                                    }
+
+                                    // Show alternatives (for Rephrase and similar)
+                                    for (i, alt) in response.alternatives.iter().enumerate() {
+                                        app.conversation.push(Message {
+                                            role: Role::Assistant,
+                                            content: format!("[{}] {}", i + 1, alt),
                                         });
                                     }
 
