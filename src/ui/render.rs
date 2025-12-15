@@ -74,10 +74,10 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
 fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
     // Check if we're in Edit mode
     if let AppMode::Edit { paragraph_index, original } = &app.mode {
-        // Split area: original on top, editor below
+        // Split area: original on top (40%), editor below (60%)
         let chunks = Layout::vertical([
-            Constraint::Length(5), // Original text area
-            Constraint::Min(3),    // Editor area
+            Constraint::Percentage(40),
+            Constraint::Percentage(60),
         ])
         .split(*area);
 
