@@ -109,9 +109,62 @@ Output rules for this operation:
 
 Return your response strictly using the agreed JSON output format."#;
 
-    // Placeholder prompts (to be defined canonically like CRITIQUE)
+    /// Grammar operation — canonical definition.
+    ///
+    /// Intent: Identify and correct grammar, spelling, punctuation, and syntactic
+    /// errors while preserving the original wording, structure, tone, and style
+    /// as much as possible.
+    ///
+    /// Grammar is corrective, not editorial.
+    ///
+    /// Output contract:
+    /// - result.mode = "replace"
+    /// - result.text = corrected version
+    /// - alternatives = [] (empty)
+    /// - comments = [] (empty, unless ambiguous correction)
+    pub const GRAMMAR: &str = r#"Operation: Grammar
 
-    pub const GRAMMAR: &str = "Operation: Grammar\n\nCheck and correct grammar issues in the following text.\n\nReturn your response strictly using the agreed JSON output format.";
+You are performing strict grammatical correction.
+
+Correct grammar, spelling, punctuation, and syntax errors only.
+Make the smallest possible changes required to fix errors.
+Preserve wording, structure, tone, and style.
+
+Editorial stance:
+- Minimal intervention
+- Literal correction
+- Preserve the author's wording whenever possible
+- Prefer the smallest possible change that fixes the error
+
+What you MUST do:
+- Detect and correct grammar errors
+- Detect and correct spelling mistakes
+- Fix incorrect verb tenses or agreement
+- Fix punctuation errors
+- Fix clear syntactic mistakes that affect correctness
+- Preserve sentence structure unless it is grammatically broken
+- Ensure corrections conform to standard rules of the detected language
+
+What you MUST NOT do:
+- Do NOT rephrase sentences for style or elegance
+- Do NOT simplify complex but correct constructions
+- Do NOT alter tone, register, or voice
+- Do NOT change word choice unless grammatically required
+- Do NOT comment on structure, clarity, or argument quality
+
+Multilingual rules:
+- Detect the primary language automatically
+- Apply grammar rules appropriate to that language
+- Do not correct quoted text in another language
+- Correct non-quoted foreign-language fragments only if clearly erroneous
+
+Output rules for this operation:
+- result.mode MUST be "replace"
+- result.text contains the corrected version
+- alternatives MUST be empty
+- comments MUST be empty unless a correction is ambiguous or may surprise the user
+
+Return your response strictly using the agreed JSON output format."#;
 
     pub const REPHRASE: &str = "Operation: Rephrase\n\nRephrase the following text for improved clarity and flow.\n\nReturn your response strictly using the agreed JSON output format.";
 
