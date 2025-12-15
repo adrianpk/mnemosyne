@@ -121,7 +121,7 @@ Return your response strictly using the agreed JSON output format."#;
     /// - result.mode = "replace"
     /// - result.text = corrected version
     /// - alternatives = [] (empty)
-    /// - comments = [] (empty, unless ambiguous correction)
+    /// - comments = [summary of changes]
     pub const GRAMMAR: &str = r#"Operation: Grammar
 
 You are performing strict grammatical correction.
@@ -135,12 +135,16 @@ Editorial stance:
 - Literal correction
 - Preserve the author's wording whenever possible
 - Prefer the smallest possible change that fixes the error
+- Do NOT add optional punctuation (e.g., commas before "and" in compound
+  sentences) unless omission creates ambiguity or is clearly incorrect
+- If the text appears to be literary prose, be especially conservative;
+  do not alter the author's rhythm or cadence
 
 What you MUST do:
 - Detect and correct grammar errors
 - Detect and correct spelling mistakes
 - Fix incorrect verb tenses or agreement
-- Fix punctuation errors
+- Fix punctuation errors that are clearly wrong (not stylistic choices)
 - Fix clear syntactic mistakes that affect correctness
 - Preserve sentence structure unless it is grammatically broken
 - Ensure corrections conform to standard rules of the detected language
@@ -151,6 +155,7 @@ What you MUST NOT do:
 - Do NOT alter tone, register, or voice
 - Do NOT change word choice unless grammatically required
 - Do NOT comment on structure, clarity, or argument quality
+- Do NOT add optional commas or punctuation that reflects preference rather than rule
 
 Multilingual rules:
 - Detect the primary language automatically
@@ -161,8 +166,11 @@ Multilingual rules:
 Output rules for this operation:
 - result.mode MUST be "replace"
 - result.text contains the corrected version
+- If no corrections are needed, result.text MUST equal the original exactly
 - alternatives MUST be empty
-- comments MUST be empty unless a correction is ambiguous or may surprise the user
+- comments MUST contain a brief summary of changes made, e.g.:
+  "Corrected: 'teh' → 'the', added missing period, fixed subject-verb agreement."
+  If no changes were made, use: "No corrections needed."
 
 Return your response strictly using the agreed JSON output format."#;
 
