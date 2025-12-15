@@ -292,12 +292,13 @@ Return your response strictly using the agreed JSON output format."#;
     /// expressiveness, without rewriting sentences or altering meaning.
     ///
     /// Thesaurus is lexical suggestion, not correction or rewriting.
+    /// It is informative only - user applies changes manually.
     ///
     /// Output contract:
-    /// - result.mode = "suggest"
+    /// - result.mode = "critique" (informative, no auto-apply)
     /// - result.text = "" (empty)
-    /// - alternatives = [lexical alternatives]
-    /// - comments = brief explanation of weakness
+    /// - alternatives = [] (empty)
+    /// - comments = suggestions in format "'word' → alt1, alt2 — explanation"
     pub const THESAURUS: &str = r#"Operation: Thesaurus
 
 Identify weak, vague, or imprecise word choices.
@@ -334,12 +335,12 @@ Multilingual rules:
 - For multilingual texts, ensure alternatives match the language of the target word
 
 Output rules for this operation:
-- result.mode MUST be "suggest"
+- result.mode MUST be "critique" (this operation is informative, not auto-applied)
 - result.text MUST be empty
-- alternatives MUST be an array of strings, each in the format: "original_word → alt1, alt2"
-  Example: ["bad → inclement, severe", "big → large, massive"]
-- comments explain the lexical issue briefly and concretely
-- Avoid over-suggesting; fewer, better alternatives are preferred
+- alternatives MUST be empty
+- All suggestions go into comments as an array of strings
+- Each comment should follow the format: "'word' → alt1, alt2 — brief explanation"
+- Avoid over-suggesting; fewer, better suggestions are preferred
 
 Return your response strictly using the agreed JSON output format."#;
 
