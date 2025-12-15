@@ -58,3 +58,14 @@ pub fn index_label(i: usize) -> String {
         format!("{}{}", first, second)
     }
 }
+
+/// Convert a label character to its index (1-9 → 0-8, a-z → 9-34)
+pub fn label_to_index(c: char) -> Option<usize> {
+    if c.is_ascii_digit() && c != '0' {
+        Some((c as usize) - ('1' as usize))
+    } else if c.is_ascii_lowercase() {
+        Some(9 + (c as usize) - ('a' as usize))
+    } else {
+        None
+    }
+}

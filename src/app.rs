@@ -31,6 +31,11 @@ pub enum AppMode {
         paragraph_index: usize,
         original: String,
     },
+    /// Browsing repeated terms (Repeats/Echoes results)
+    BrowseRepeats {
+        terms: Vec<String>,
+        highlighted: Option<String>,
+    },
 }
 
 pub struct App<'a> {
@@ -193,6 +198,37 @@ impl<'a> App<'a> {
         }
         self.editor = None;
         self.mode = AppMode::Normal;
+    }
+
+    pub fn enter_browse_repeats(&mut self, terms: Vec<String>) {
+        self.mode = AppMode::BrowseRepeats {
+            terms,
+            highlighted: None,
+        };
+    }
+
+    pub fn highlight_term(&mut self, choice: usize) -> bool {
+        if let AppMode::BrowseRepeats { terms, highlighted } = &mut self.mode {
+            if choice > 0 && choice <= terms.len() {
+                let term = terms[choice - 1].clone();
+                *highlighted = Some(term);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn exit_browse_repeats(&mut self) {
+        self.mode = AppMode::Normal;
+    }
+
+    /// Get the currently highlighted term for rendering
+    pub fn highlighted_term(&self) -> Option<&str> {
+        if let AppMode::BrowseRepeats { highlighted, .. } = &self.mode {
+            highlighted.as_deref()
+        } else {
+            None
+        }
     }
 }
 

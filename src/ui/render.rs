@@ -43,11 +43,7 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
         AppMode::Normal => {
             let input_style = Style::default().fg(Color::Cyan);
             if app.input.is_empty() {
-                let hint_style = Style::default().fg(Color::DarkGray);
-                lines.push(Line::from(vec![
-                    Span::styled("> _", input_style),
-                    Span::styled("  [e] edit the paragraph", hint_style),
-                ]));
+                lines.push(Line::from(Span::styled("> _", input_style)));
             } else {
                 lines.push(Line::from(Span::styled(format!("> {}_", app.input), input_style)));
             }
@@ -70,6 +66,21 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
                 "Editing — [Ctrl+S] Save  [Esc] Cancel",
                 hint_style,
             )));
+        }
+        AppMode::BrowseRepeats { terms, highlighted } => {
+            let hint_style = Style::default().fg(Color::Yellow);
+            let label_hint = if terms.len() <= 9 {
+                format!("[1-{}]", terms.len())
+            } else {
+                let last_label = index_label(terms.len() - 1);
+                format!("[1-9,a-{}]", last_label)
+            };
+            let hint = format!(
+                "{} Highlight  [Esc] Exit{}",
+                label_hint,
+                highlighted.as_ref().map(|t| format!("  → '{}'", t)).unwrap_or_default()
+            );
+            lines.push(Line::from(Span::styled(hint, hint_style)));
         }
     }
 
@@ -170,7 +181,7 @@ fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             }
 
             // Normal view
-            let style = if app.highlight_all {
+            let base_style = if app.highlight_all {
                 // Full-document operation: highlight all paragraphs
                 Style::default().add_modifier(Modifier::REVERSED)
             } else if i == app.document.selected && review_info.is_none() {
@@ -178,10 +189,17 @@ fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             } else {
                 Style::default()
             };
-            let line = Line::from(vec![
-                Span::styled(format!("[{}] ", index_label(i)), index_style),
-                Span::styled(p.clone(), style),
-            ]);
+
+            // Check if we need to highlight a term
+            let spans = if let Some(term) = app.highlighted_term() {
+                highlight_term_in_text(p, term, base_style)
+            } else {
+                vec![Span::styled(p.clone(), base_style)]
+            };
+
+            let mut line_spans = vec![Span::styled(format!("[{}] ", index_label(i)), index_style)];
+            line_spans.extend(spans);
+            let line = Line::from(line_spans);
             vec![line, Line::from("")]
         })
         .collect();
@@ -232,4 +250,42 @@ fn calculate_scroll(app: &App<'_>, area: &Rect) -> u16 {
     } else {
         0
     }
+}
+
+/// Split text into spans, highlighting occurrences of the search term
+fn highlight_term_in_text<'a>(text: &'a str, term: &str, base_style: Style) -> Vec<Span<'a>> {
+    let highlight_style = Style::default()
+        .fg(Color::Black)
+        .bg(Color::Yellow)
+        .add_modifier(Modifier::BOLD);
+
+    let term_lower = term.to_lowercase();
+    let text_lower = text.to_lowercase();
+
+    let mut spans = Vec::new();
+    let mut last_end = 0;
+
+    // Find all occurrences (case-insensitive)
+    for (start, _) in text_lower.match_indices(&term_lower) {
+        // Add text before the match
+        if start > last_end {
+            spans.push(Span::styled(&text[last_end..start], base_style));
+        }
+        // Add the highlighted match (preserve original case)
+        let end = start + term.len();
+        spans.push(Span::styled(&text[start..end], highlight_style));
+        last_end = end;
+    }
+
+    // Add remaining text after last match
+    if last_end < text.len() {
+        spans.push(Span::styled(&text[last_end..], base_style));
+    }
+
+    // If no matches, return the whole text with base style
+    if spans.is_empty() {
+        spans.push(Span::styled(text, base_style));
+    }
+
+    spans
 }
