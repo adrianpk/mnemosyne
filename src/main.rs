@@ -86,15 +86,19 @@ async fn main() -> io::Result<()> {
                     KeyCode::Backspace => {
                         app.input.pop();
                     }
-                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) => {
+                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(5) | KeyCode::F(6) => {
                         let (user_input, operation_prompt, is_critique) = if key.code == KeyCode::F(3) {
                             (String::from("/critique"), operations::CRITIQUE, true)
                         } else if key.code == KeyCode::F(5) {
                             (String::from("/style"), operations::STYLE, false)
+                        } else if key.code == KeyCode::F(6) {
+                            (String::from("/grammar"), operations::GRAMMAR, false)
                         } else if app.input.starts_with("/critique") {
                             (app.input.clone(), operations::CRITIQUE, true)
                         } else if app.input.starts_with("/style") {
                             (app.input.clone(), operations::STYLE, false)
+                        } else if app.input.starts_with("/grammar") {
+                            (app.input.clone(), operations::GRAMMAR, false)
                         } else if !app.input.is_empty() {
                             (app.input.clone(), operations::GRAMMAR, false)
                         } else {
