@@ -285,7 +285,63 @@ Return your response strictly using the agreed JSON output format."#;
 
     pub const SUMMARY: &str = "Operation: Summary\n\nSummarize the following text concisely.\n\nReturn your response strictly using the agreed JSON output format.";
 
-    pub const THESAURUS: &str = "Operation: Thesaurus\n\nSuggest alternative word choices for key terms in the following text.\n\nReturn your response strictly using the agreed JSON output format.";
+    /// Thesaurus operation — canonical definition.
+    ///
+    /// Intent: Identify weak, vague, or imprecise word choices and propose
+    /// context-appropriate lexical alternatives that improve precision and
+    /// expressiveness, without rewriting sentences or altering meaning.
+    ///
+    /// Thesaurus is lexical suggestion, not correction or rewriting.
+    ///
+    /// Output contract:
+    /// - result.mode = "suggest"
+    /// - result.text = "" (empty)
+    /// - alternatives = [lexical alternatives]
+    /// - comments = brief explanation of weakness
+    pub const THESAURUS: &str = r#"Operation: Thesaurus
+
+Identify weak, vague, or imprecise word choices.
+Suggest context-appropriate lexical alternatives only when there is a clear gain in precision.
+
+Do not rewrite sentences.
+Do not suggest synonyms unnecessarily.
+Respect intentional vagueness when appropriate.
+
+Editorial stance:
+- Be restrained and selective
+- Suggest only when there is a clear lexical weakness
+- Prefer precision over embellishment
+- Respect intentional vagueness when context suggests it
+
+What you MUST do:
+- Identify words or short expressions that are vague or non-specific
+- Identify weak intensifiers (e.g. generic adverbs)
+- Identify generic verbs where precision would help
+- Propose alternatives that fit the immediate context
+- Preserve meaning and register
+- Limit suggestions to the problematic word or expression only
+
+What you MUST NOT do:
+- Do NOT rewrite sentences
+- Do NOT suggest synonyms when the original word is adequate
+- Do NOT impose stylistic preferences
+- Do NOT suggest higher-register or more complex words without justification
+- Do NOT correct grammar or phrasing
+
+Multilingual rules:
+- Apply lexical norms of the detected primary language
+- Do not suggest replacements inside quoted text
+- For multilingual texts, ensure alternatives match the language of the target word
+
+Output rules for this operation:
+- result.mode MUST be "suggest"
+- result.text MUST be empty
+- alternatives MUST be an array of strings, each in the format: "original_word → alt1, alt2"
+  Example: ["bad → inclement, severe", "big → large, massive"]
+- comments explain the lexical issue briefly and concretely
+- Avoid over-suggesting; fewer, better alternatives are preferred
+
+Return your response strictly using the agreed JSON output format."#;
 
     pub const OVERUSE: &str = "Operation: Overuse\n\nIdentify overused words or phrases in the following text.\n\nReturn your response strictly using the agreed JSON output format.";
 }
