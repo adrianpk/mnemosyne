@@ -133,11 +133,21 @@ impl<'a> App<'a> {
     }
 
     pub fn enter_edit(&mut self) {
+        use ratatui::style::{Color, Style};
+        use ratatui::widgets::{Block, Borders};
+
         let paragraph_index = self.document.selected;
         let original = self.document.paragraphs[paragraph_index].clone();
 
         let mut textarea = TextArea::default();
         textarea.insert_str(&original);
+        textarea.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Edit (Ctrl+Enter to apply)")
+        );
+        textarea.set_cursor_line_style(Style::default());
+        textarea.set_style(Style::default().fg(Color::Rgb(187, 154, 247))); // purple like suggestions
 
         self.editor = Some(textarea);
         self.mode = AppMode::Edit {
