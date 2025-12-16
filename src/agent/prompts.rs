@@ -8,6 +8,21 @@ pub fn system_prompt() -> String {
     )
 }
 
+/// System prompt for Freeform Editorial Mode.
+/// Includes the standard persona and contract, plus freeform-specific instructions.
+pub fn freeform_system_prompt() -> String {
+    format!(
+        r#"{PERSONA}
+
+{OUTPUT_CONTRACT}
+
+{}
+
+"#,
+        operations::FREEFORM_SYSTEM_ADDITION
+    )
+}
+
 const PERSONA: &str = r#"You are a professional academic and editorial proofreader.
 
 Your role is to analyze and improve texts with a high standard of linguistic, stylistic, and academic rigor.
@@ -39,7 +54,7 @@ You MUST respond with a valid JSON object. No prose before or after. The schema 
 
 {
   "result": {
-    "mode": "replace" | "suggest" | "critique",
+    "mode": "replace" | "suggest" | "critique" | "none",
     "text": "<corrected or analyzed text>"
   },
   "alternatives": ["<optional alternative phrasings>"],
@@ -52,8 +67,8 @@ You MUST respond with a valid JSON object. No prose before or after. The schema 
 }
 
 Field semantics:
-- result.mode: "replace" if safe to apply directly, "suggest" if alternatives provided, "critique" if no replacement intended.
-- result.text: The corrected text only. Never include commentary here.
+- result.mode: "replace" if safe to apply directly, "suggest" if alternatives provided, "critique" if no replacement intended, "none" if pure conversational response.
+- result.text: The corrected text only. Never include commentary here. Empty string for critique and none modes.
 - alternatives: Optional variant phrasings. Never applied automatically.
 - comments: Editorial notes, reasoning, warnings, or stylistic observations.
 - notes: Metadata to help interpret the response."#;
@@ -518,4 +533,98 @@ Output rules for this operation:
 - comments must focus on editorial fatigue, not grammar or style
 
 Return your response strictly using the agreed JSON output format."#;
+
+    /// Freeform Editorial Mode — canonical definition.
+    ///
+    /// Intent: Allow natural language interaction where the LLM infers the user's
+    /// editorial intent and responds accordingly. The user does not specify a
+    /// command; the system determines whether they want an editorial action,
+    /// guidance, or conversational response.
+    ///
+    /// Output contract:
+    /// - result.mode = "replace" | "suggest" | "critique" | "none" (inferred by LLM)
+    /// - result.text = depends on mode (empty for suggest/critique/none)
+    /// - alternatives = depends on mode
+    /// - comments = depends on mode
+    pub const FREEFORM_SYSTEM_ADDITION: &str = r#"You are operating in Freeform Editorial Mode.
+
+The user may express requests in natural language.
+Your task is to infer the editorial intent and respond accordingly,
+while strictly respecting the structured JSON output contract.
+
+IMPORTANT: In Freeform mode, the conservative editorial restrictions are relaxed.
+When the user explicitly requests creative tasks (rewrites in another style,
+transformations to different forms, etc.), you should honor those requests.
+The user has full control and will decide whether to accept your suggestions.
+
+You must decide which response mode applies:
+- replace: provide text that could be applied to the document
+- suggest: provide alternatives only (use this for creative rewrites)
+- critique: provide analysis or guidance
+- none: provide a conversational or explanatory response
+
+Never mix modes.
+Never apply changes implicitly.
+Always declare the chosen mode explicitly in the JSON."#;
+
+    /// Generate a freeform editorial prompt with the given user request, scope, and text.
+    pub fn freeform_prompt(user_request: &str, scope: &str, text: &str) -> String {
+        format!(
+            r#"Mode: Freeform Editorial
+
+Scope:
+{scope}
+
+User request:
+"""
+{user_request}
+"""
+
+Text context:
+"""
+{text}
+"""
+
+Instructions:
+- Infer the user's intent.
+- Decide the appropriate response mode.
+- Respect the selected scope.
+- Do not exceed the scope.
+
+CRITICAL OUTPUT RULES:
+- If you are PRODUCING MODIFIED TEXT (rewrites, translations, transformations, simplifications, etc.):
+  * ACTUALLY DO THE WORK - generate the full modified text
+  * Use mode "suggest" and put the modified text in the "alternatives" array
+  * Each alternative should be the COMPLETE rewritten text, not an explanation about what you would do
+  * NEVER just describe what the transformation would be - actually provide the transformed text
+  * Use "comments" only for brief meta-notes (e.g., "Translated to Italian", "Simplified for clarity")
+  * NEVER put the actual rewritten text in comments - it goes in alternatives
+
+- If you are PROVIDING GUIDANCE without rewriting (analysis, suggestions, advice):
+  * Use mode "critique" and put your guidance in "comments"
+  * Leave "alternatives" and "result.text" empty
+
+- If you are HAVING A CONVERSATION (answering questions, explaining):
+  * Use mode "none" and put your response in "comments"
+  * Leave "alternatives" and "result.text" empty
+
+Example of CORRECT output for transformation requests:
+{{
+  "result": {{ "mode": "suggest", "text": "" }},
+  "alternatives": ["[The complete transformed/rewritten text in full]"],
+  "comments": ["Brief note about the transformation applied"],
+  "notes": {{ ... }}
+}}
+
+Example of WRONG output (DO NOT DO THIS):
+{{
+  "result": {{ "mode": "critique", "text": "" }},
+  "alternatives": [],
+  "comments": ["The text has been transformed by doing X and Y..."],  ← WRONG! Actual transformed text must be in alternatives
+  "notes": {{ ... }}
+}}
+
+Return your response strictly using the agreed JSON output format."#
+        )
+    }
 }
