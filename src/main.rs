@@ -64,12 +64,12 @@ async fn main() -> io::Result<()> {
         if let Event::Key(key) = event::read()? {
             // Global keybindings (work in any mode)
             match key.code {
-                KeyCode::F(11) => {
+                KeyCode::Char('q') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
                     app.quit();
                     continue;
                 }
-                KeyCode::Char('q') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
-                    app.quit();
+                KeyCode::F(12) => {
+                    app.toggle_more_menu();
                     continue;
                 }
                 _ => {}
@@ -78,6 +78,39 @@ async fn main() -> io::Result<()> {
             // Mode-specific keybindings
             match &app.mode {
                 AppMode::Normal => match key.code {
+                    KeyCode::Char('a') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        // Toggle select all / select paragraph
+                        app.highlight_all = !app.highlight_all;
+                        let msg = if app.highlight_all {
+                            "Full document selected (all paragraphs)"
+                        } else {
+                            "Single paragraph mode"
+                        };
+                        app.conversation.push(Message {
+                            role: Role::Assistant,
+                            content: String::from(msg),
+                        });
+                    }
+                    KeyCode::Char('z') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        app.undo();
+                    }
+                    KeyCode::Char('y') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        app.redo();
+                    }
+                    KeyCode::Char('s') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        // Manual save: commits current state and purges future versions if in the past
+                        if let Err(e) = app.document.commit_current_state() {
+                            app.conversation.push(Message {
+                                role: Role::Assistant,
+                                content: format!("Error saving: {}", e),
+                            });
+                        } else {
+                            app.conversation.push(Message {
+                                role: Role::Assistant,
+                                content: format!("Saved. {}", app.document.version_info()),
+                            });
+                        }
+                    }
                     KeyCode::Char('j') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
                         app.document.select_next()
                     }
@@ -95,48 +128,96 @@ async fn main() -> io::Result<()> {
                     KeyCode::Char('e') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
                         app.enter_edit();
                     }
+                    KeyCode::F(11) => {
+                        // F11: Settings (placeholder for now)
+                        app.conversation.push(Message {
+                            role: Role::Assistant,
+                            content: String::from("Settings not yet implemented."),
+                        });
+                    }
                     KeyCode::Char(c) => app.input.push(c),
                     KeyCode::Backspace => {
                         app.input.pop();
                     }
-                    KeyCode::Enter | KeyCode::F(3) | KeyCode::F(4) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) | KeyCode::F(9) | KeyCode::F(10) => {
+                    KeyCode::Enter | KeyCode::F(2) | KeyCode::F(3) | KeyCode::F(4) | KeyCode::F(5) | KeyCode::F(6) | KeyCode::F(7) | KeyCode::F(8) | KeyCode::F(9) | KeyCode::F(10) => {
                         // is_informative: operations that don't auto-apply
                         // is_full_doc: operations that analyze the entire document
                         // is_browse: operations that enter BrowseRepeats mode (Repeats, Echoes)
-                        let (user_input, operation_prompt, is_informative, is_full_doc, is_browse) = if key.code == KeyCode::F(3) {
-                            (String::from("/critique"), operations::CRITIQUE, true, true, false)
+                        // is_summary: special operation that saves to file with -summary suffix
+                        let (user_input, operation_prompt, is_informative, is_full_doc, is_browse, is_summary) = if key.code == KeyCode::F(2) {
+                            (String::from("/summary"), operations::SUMMARY, true, true, false, true)
+                        } else if key.code == KeyCode::F(3) {
+                            (String::from("/critique"), operations::CRITIQUE, true, true, false, false)
                         } else if key.code == KeyCode::F(4) {
-                            (String::from("/repeats"), operations::REPEATS, true, true, true)
+                            (String::from("/repeats"), operations::REPEATS, true, true, true, false)
                         } else if key.code == KeyCode::F(5) {
-                            (String::from("/style"), operations::STYLE, false, false, false)
+                            (String::from("/style"), operations::STYLE, false, false, false, false)
                         } else if key.code == KeyCode::F(6) {
-                            (String::from("/grammar"), operations::GRAMMAR, false, false, false)
+                            (String::from("/grammar"), operations::GRAMMAR, false, false, false, false)
                         } else if key.code == KeyCode::F(7) {
-                            (String::from("/rephrase"), operations::REPHRASE, false, false, false)
+                            (String::from("/rephrase"), operations::REPHRASE, false, false, false, false)
                         } else if key.code == KeyCode::F(8) {
-                            (String::from("/thesaurus"), operations::THESAURUS, true, false, false)
+                            (String::from("/thesaurus"), operations::THESAURUS, true, false, false, false)
                         } else if key.code == KeyCode::F(9) {
-                            (String::from("/overuse"), operations::OVERUSE, true, false, false)
+                            (String::from("/overuse"), operations::OVERUSE, true, false, false, false)
                         } else if key.code == KeyCode::F(10) {
-                            (String::from("/echoes"), operations::ECHOES, true, true, true)
+                            (String::from("/echoes"), operations::ECHOES, true, true, true, false)
+                        } else if app.input.starts_with("/summary") {
+                            (app.input.clone(), operations::SUMMARY, true, true, false, true)
                         } else if app.input.starts_with("/critique") {
-                            (app.input.clone(), operations::CRITIQUE, true, true, false)
+                            (app.input.clone(), operations::CRITIQUE, true, true, false, false)
                         } else if app.input.starts_with("/repeats") {
-                            (app.input.clone(), operations::REPEATS, true, true, true)
+                            (app.input.clone(), operations::REPEATS, true, true, true, false)
                         } else if app.input.starts_with("/style") {
-                            (app.input.clone(), operations::STYLE, false, false, false)
+                            (app.input.clone(), operations::STYLE, false, false, false, false)
                         } else if app.input.starts_with("/grammar") {
-                            (app.input.clone(), operations::GRAMMAR, false, false, false)
+                            (app.input.clone(), operations::GRAMMAR, false, false, false, false)
                         } else if app.input.starts_with("/rephrase") {
-                            (app.input.clone(), operations::REPHRASE, false, false, false)
+                            (app.input.clone(), operations::REPHRASE, false, false, false, false)
                         } else if app.input.starts_with("/thesaurus") {
-                            (app.input.clone(), operations::THESAURUS, true, false, false)
+                            (app.input.clone(), operations::THESAURUS, true, false, false, false)
                         } else if app.input.starts_with("/overuse") {
-                            (app.input.clone(), operations::OVERUSE, true, false, false)
+                            (app.input.clone(), operations::OVERUSE, true, false, false, false)
                         } else if app.input.starts_with("/echoes") {
-                            (app.input.clone(), operations::ECHOES, true, true, true)
+                            (app.input.clone(), operations::ECHOES, true, true, true, false)
                         } else if !app.input.is_empty() {
-                            (app.input.clone(), operations::GRAMMAR, false, false, false)
+                            // Freeform Editorial Mode: natural language input
+                            // Check if user has selected full document via:
+                            // 1. Ctrl+A (app.highlight_all)
+                            // 2. /all prefix
+                            // 3. Mentions "full document" in text (language-specific keywords)
+
+                            let (user_input, is_all_command) = if app.input.starts_with("/all") {
+                                // Strip /all prefix and set full doc mode
+                                let rest = &app.input[4..];
+                                let trimmed = rest.trim_start();
+                                (trimmed.to_string(), true)
+                            } else if app.input.starts_with("/full") {
+                                // Strip /full prefix (alias for /all)
+                                let rest = &app.input[5..];
+                                let trimmed = rest.trim_start();
+                                (trimmed.to_string(), true)
+                            } else {
+                                (app.input.clone(), false)
+                            };
+
+                            let input_lower = user_input.to_lowercase();
+                            let mentions_full_doc =
+                                input_lower.contains("full document") ||
+                                input_lower.contains("entire document") ||
+                                input_lower.contains("whole document") ||
+                                input_lower.contains("all paragraphs") ||
+                                input_lower.contains("whole text") ||
+                                input_lower.contains("entire text") ||
+                                input_lower.contains("documento completo") ||
+                                input_lower.contains("texto completo") ||
+                                input_lower.contains("todo el texto") ||
+                                input_lower.contains("todos los párrafos");
+
+                            let is_full_doc_request = app.highlight_all || is_all_command || mentions_full_doc;
+
+                            // Use empty string as operation_prompt, will be handled differently
+                            (user_input, "", false, is_full_doc_request, false, false)
                         } else {
                             continue;
                         };
@@ -151,13 +232,17 @@ async fn main() -> io::Result<()> {
                         app.conversation_scroll = 0;
 
                         // Highlight all paragraphs for full-doc operations
+                        // Note: app.highlight_all might already be true from Ctrl+A (manual toggle)
+                        // Track if we're temporarily highlighting due to command (not manual Ctrl+A)
+                        let was_manual_highlight = app.highlight_all;
                         if is_full_doc {
                             app.highlight_all = true;
                         }
 
                         let selected_idx = app.document.selected;
                         // For full-doc operations, join all paragraphs
-                        let content = if is_full_doc {
+                        // Use is_full_doc OR app.highlight_all (for Ctrl+A case)
+                        let content = if is_full_doc || app.highlight_all {
                             app.document.paragraphs.iter()
                                 .enumerate()
                                 .map(|(i, p)| format!("[{}] {}", i + 1, p))
@@ -168,11 +253,27 @@ async fn main() -> io::Result<()> {
                         };
 
                         if let Some(ref agent) = llm_agent {
-                            let prompt = Prompt::new(
-                                &prompts::system_prompt(),
-                                operation_prompt,
-                                &content,
-                            );
+                            let prompt = if operation_prompt.is_empty() {
+                                // Freeform Editorial Mode
+                                let scope = if is_full_doc {
+                                    "Full document"
+                                } else {
+                                    "Selected paragraph"
+                                };
+                                let instruction = prompts::operations::freeform_prompt(&user_input, scope, &content);
+                                Prompt::new(
+                                    &prompts::freeform_system_prompt(),
+                                    &instruction,
+                                    "", // Content is already in the instruction
+                                )
+                            } else {
+                                // Standard operation prompt
+                                Prompt::new(
+                                    &prompts::system_prompt(),
+                                    operation_prompt,
+                                    &content,
+                                )
+                            };
 
                             // Animated "Thinking" indicator
                             let dots = ["Thinking", "Thinking.", "Thinking..", "Thinking..."];
@@ -207,6 +308,8 @@ async fn main() -> io::Result<()> {
 
                             match response {
                                 Ok(response) => {
+                                    use crate::agent::ResponseMode;
+
                                     if is_browse && !response.alternatives.is_empty() {
                                         // Browse mode: show comments labeled for selection (1-9, a-z)
                                         for (i, comment) in response.comments.iter().enumerate() {
@@ -225,26 +328,72 @@ async fn main() -> io::Result<()> {
                                             });
                                         }
 
-                                        // Show alternatives
-                                        if !response.alternatives.is_empty() {
-                                            for (i, alt) in response.alternatives.iter().enumerate() {
-                                                app.conversation.push(Message {
-                                                    role: Role::Assistant,
-                                                    content: format!("[{}] {}", i + 1, alt),
-                                                });
+                                        // Handle based on response mode
+                                        match response.result.mode {
+                                            ResponseMode::None | ResponseMode::Critique => {
+                                                // Pure conversational or critique: no action needed
+                                                // Comments already shown above
                                             }
-                                            // Only enter selection mode for non-informative ops (Rephrase)
-                                            if !is_informative {
-                                                app.enter_select_alternative(
-                                                    response.alternatives.clone(),
-                                                    selected_idx,
-                                                );
+                                            ResponseMode::Suggest => {
+                                                // Show alternatives
+                                                if !response.alternatives.is_empty() {
+                                                    for (i, alt) in response.alternatives.iter().enumerate() {
+                                                        app.conversation.push(Message {
+                                                            role: Role::Assistant,
+                                                            content: format!("[{}] {}", i + 1, alt),
+                                                        });
+                                                    }
+                                                    // Enter selection mode for non-informative ops
+                                                    // Works for both single paragraph and full document
+                                                    let is_full_doc_mode = is_full_doc || app.highlight_all;
+                                                    if !is_informative {
+                                                        app.enter_select_alternative(
+                                                            response.alternatives.clone(),
+                                                            selected_idx,
+                                                            is_full_doc_mode,
+                                                        );
+                                                    }
+                                                }
                                             }
-                                        } else if !is_informative
-                                            && !response.result.text.is_empty()
-                                        {
-                                            let suggestion = response.to_suggestion(&app.document.paragraphs[selected_idx]);
-                                            app.enter_review(suggestion, selected_idx);
+                                            ResponseMode::Replace => {
+                                                // Text replacement available
+                                                // Only allow for single paragraph scope
+                                                let is_single_paragraph = !is_full_doc && !app.highlight_all;
+                                                if !is_informative && !response.result.text.is_empty() && is_single_paragraph {
+                                                    let suggestion = response.to_suggestion(&app.document.paragraphs[selected_idx]);
+                                                    app.enter_review(suggestion, selected_idx);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // Save summary to file if this was a summary operation
+                                    if is_summary {
+                                        if let Some(ref file_path) = app.file_path {
+                                            let summary_path = file_path.with_extension("");
+                                            let summary_filename = format!(
+                                                "{}-summary.{}",
+                                                summary_path.file_name().unwrap().to_string_lossy(),
+                                                file_path.extension().unwrap_or_default().to_string_lossy()
+                                            );
+                                            let summary_path = file_path.with_file_name(summary_filename);
+
+                                            // Combine all comments into summary text
+                                            let summary_content = response.comments.join("\n\n");
+
+                                            match std::fs::write(&summary_path, &summary_content) {
+                                                Ok(_) => {
+                                                    app.conversation.push(Message {
+                                                        role: Role::Assistant,
+                                                        content: format!("Summary saved to: {}", summary_path.display()),
+                                                    });
+                                                }
+                                                Err(e) => {
+                                                    app.conversation.push(Message {
+                                                        role: Role::Assistant,
+                                                        content: format!("Warning: Could not save summary: {}", e),
+                                                    });
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -255,8 +404,11 @@ async fn main() -> io::Result<()> {
                                     });
                                 }
                             }
-                            // Reset highlight after full-doc operation
-                            app.highlight_all = false;
+                            // Reset highlight only if it wasn't manually set via Ctrl+A
+                            // If user pressed Ctrl+A, it stays active until they press Ctrl+A again
+                            if !was_manual_highlight {
+                                app.highlight_all = false;
+                            }
                         } else {
                             // Use mock agent
                             let prompt = Prompt::new(
@@ -319,6 +471,12 @@ async fn main() -> io::Result<()> {
                     // Allow navigation while browsing
                     KeyCode::Down => app.document.select_next(),
                     KeyCode::Up => app.document.select_prev(),
+                    _ => {}
+                },
+                AppMode::MoreMenu => match key.code {
+                    KeyCode::Char('q') => {
+                        app.toggle_more_menu(); // Close menu
+                    }
                     _ => {}
                 },
             }

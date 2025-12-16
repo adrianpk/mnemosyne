@@ -72,6 +72,7 @@ pub enum ResponseMode {
     Replace,
     Suggest,
     Critique,
+    None,
 }
 
 /// Deserialize confidence that might come in various cases.

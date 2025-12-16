@@ -82,6 +82,20 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             );
             lines.push(Line::from(Span::styled(hint, hint_style)));
         }
+        AppMode::MoreMenu => {
+            // Clear previous lines and show the More menu
+            lines.clear();
+            let title_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+            let hint_style = Style::default().fg(Color::Yellow);
+
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled("More Operations", title_style)));
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled("  (No additional operations yet)", Style::default().fg(Color::DarkGray))));
+            lines.push(Line::from(""));
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled("[q] Close  [F12] Close", hint_style)));
+        }
     }
 
     // Calculate scroll
@@ -89,10 +103,12 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
     let panel_width = area.width.saturating_sub(2) as usize;
 
     // Estimate total lines (accounting for wrap)
+    // Use ceiling division for more accurate wrapping calculation
     let total_lines: usize = lines.iter().map(|line| {
         let len = line.width();
         if panel_width > 0 && len > panel_width {
-            (len / panel_width) + 1
+            // Ceiling division: (len + panel_width - 1) / panel_width
+            (len + panel_width - 1) / panel_width
         } else {
             1
         }

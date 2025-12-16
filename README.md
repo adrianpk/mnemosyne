@@ -29,3 +29,5 @@ Early. Very early. Two panels on a screen and a lot of curiosity.
 ```bash
 cargo run -- path/to/document.md
 ```
+
+For detailed documentation on all features and operations, see the [Usage Guide](docs/usage-guide.md).
