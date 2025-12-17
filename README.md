@@ -20,9 +20,41 @@ The goal is to build something useful while actually getting the 'kung-fu' of ow
 
 ## Status
 
-Early. Very early. Two panels on a screen and a lot of curiosity.
+Most of the core functionality is implemented now. The interface works, operations respond as they should. Details could use polishing, but it's becoming something you can actually use.
 
 [See it in action](docs/gallery/index.md)
+
+## Installation
+
+### For non-technical users (recommended)
+
+**Download the pre-compiled binary for your system:**
+
+1. Go to the [Releases page](https://github.com/adrianmfi/mnemosyne/releases)
+2. Download the latest version for your operating system:
+   - **Windows**: `mnemosyne-windows-x86_64.exe`
+   - **macOS (Intel)**: `mnemosyne-macos-x86_64`
+   - **macOS (Apple Silicon)**: `mnemosyne-macos-arm64`
+   - **Linux**: `mnemosyne-linux-x86_64`
+3. Move the file to a convenient location
+4. On macOS/Linux, make it executable:
+   ```bash
+   chmod +x mnemosyne-macos-x86_64  # or the Linux version
+   ```
+5. Run it:
+   - **Windows**: Double-click `mnemosyne-windows-x86_64.exe` or run from terminal
+   - **macOS/Linux**: Open terminal and run `./mnemosyne-macos-x86_64 your-document.txt`
+
+### For developers
+
+If you have Rust installed, you can build from source:
+
+```bash
+git clone <repository-url>
+cd mnemosyne
+cargo build --release
+./target/release/mnemosyne your-document.txt
+```
 
 ## Configuration
 

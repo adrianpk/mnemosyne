@@ -119,7 +119,7 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             // Navigation
             lines.push(Line::from(Span::styled("Navigation", section_style)));
             lines.push(Line::from(vec![
-                Span::styled("  ↓/↑ Ctrl+J/K  ", key_style),
+                Span::styled("  ↓/↑ Ctrl+J/K   ", key_style),
                 Span::styled("Select paragraph", desc_style),
             ]));
             lines.push(Line::from(vec![
@@ -135,49 +135,49 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             // Editorial Operations
             lines.push(Line::from(Span::styled("Editorial Operations", section_style)));
             lines.push(Line::from(vec![
-                Span::styled("  F2 ", key_style),
-                Span::styled("Summary", desc_style),
-                Span::styled("  (full doc, saves to file)", hint_style),
+                Span::styled("  F2  ", key_style),
+                Span::styled("Summary  ", desc_style),
+                Span::styled(" (full doc, saves to file)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F3 ", key_style),
-                Span::styled("Critique", desc_style),
+                Span::styled("  F3  ", key_style),
+                Span::styled("Critique ", desc_style),
                 Span::styled(" (full doc, feedback)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F4 ", key_style),
-                Span::styled("Repeats", desc_style),
-                Span::styled("  (full doc, browse mode)", hint_style),
+                Span::styled("  F4  ", key_style),
+                Span::styled("Repeats  ", desc_style),
+                Span::styled(" (full doc, browse mode)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F5 ", key_style),
-                Span::styled("Style", desc_style),
-                Span::styled("    (paragraph, auto-apply)", hint_style),
+                Span::styled("  F5  ", key_style),
+                Span::styled("Style    ", desc_style),
+                Span::styled(" (paragraph, auto-apply)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F6 ", key_style),
-                Span::styled("Grammar", desc_style),
-                Span::styled("  (paragraph, auto-apply)", hint_style),
+                Span::styled("  F6  ", key_style),
+                Span::styled("Grammar  ", desc_style),
+                Span::styled(" (paragraph, auto-apply)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F7 ", key_style),
-                Span::styled("Rephrase", desc_style),
+                Span::styled("  F7  ", key_style),
+                Span::styled("Rephrase ", desc_style),
                 Span::styled(" (paragraph, choose alternative)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F8 ", key_style),
+                Span::styled("  F8  ", key_style),
                 Span::styled("Thesaurus", desc_style),
-                Span::styled("(paragraph, suggestions)", hint_style),
+                Span::styled(" (paragraph, suggestions)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F9 ", key_style),
-                Span::styled("Overuse", desc_style),
-                Span::styled("  (paragraph, flags clichés)", hint_style),
+                Span::styled("  F9  ", key_style),
+                Span::styled("Overuse  ", desc_style),
+                Span::styled(" (paragraph, flags clichés)", hint_style),
             ]));
             lines.push(Line::from(vec![
-                Span::styled("  F10", key_style),
-                Span::styled(" Echoes", desc_style),
-                Span::styled("   (full doc, proximity repeats)", hint_style),
+                Span::styled("  F10 ", key_style),
+                Span::styled("Echoes   ", desc_style),
+                Span::styled(" (full doc, proximity repeats)", hint_style),
             ]));
             lines.push(Line::from(""));
 
@@ -243,29 +243,25 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
         }
     }
 
-    // Calculate scroll
+    // NOTE: Calculate scroll
     let panel_height = area.height.saturating_sub(2) as usize; // minus borders
     let panel_width = area.width.saturating_sub(2) as usize;
 
-    // Estimate total lines (accounting for wrap)
-    // Use ceiling division for more accurate wrapping calculation
+    // Estimate total lines
     let total_lines: usize = lines.iter().map(|line| {
         let len = line.width();
         if panel_width > 0 && len > panel_width {
-            // Ceiling division: (len + panel_width - 1) / panel_width
             (len + panel_width - 1) / panel_width
         } else {
             1
         }
     }).sum();
 
-    // Auto-scroll to bottom, but allow manual scroll up via conversation_scroll
+    // NOTE: Auto-scroll to bottom, but we need to allow manual scroll up via conversation_scroll
     let max_scroll = total_lines.saturating_sub(panel_height);
     let scroll = if app.conversation_scroll == 0 {
-        // Auto-scroll: show most recent
         max_scroll as u16
     } else {
-        // Manual scroll: offset from bottom
         max_scroll.saturating_sub(app.conversation_scroll) as u16
     };
 
@@ -277,8 +273,7 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
 }
 
 fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
-    // Check if we're in Edit mode
-    // Settings mode: show instructions and editor
+    // NOTE: Check if we're in Edit mode
     if let AppMode::Settings { .. } = &app.mode {
         let chunks = Layout::vertical([
             Constraint::Length(8),
@@ -307,14 +302,13 @@ fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
     }
 
     if let AppMode::Edit { paragraph_index, original } = &app.mode {
-        // Split area: original on top (40%), editor below (60%)
         let chunks = Layout::vertical([
             Constraint::Percentage(40),
             Constraint::Percentage(60),
         ])
         .split(*area);
 
-        // Draw original text
+        // NOTE: Render original text
         let index_style = Style::default().add_modifier(Modifier::DIM);
         let removed_style = Style::default().fg(Color::Rgb(224, 175, 104)); // yellow
         let original_lines = vec![
@@ -328,7 +322,6 @@ fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             .wrap(Wrap { trim: false });
         frame.render_widget(original_panel, chunks[0]);
 
-        // Draw editor
         if let Some(editor) = &app.editor {
             frame.render_widget(editor, chunks[1]);
         }
@@ -460,7 +453,7 @@ fn highlight_term_in_text<'a>(text: &'a str, term: &str, base_style: Style) -> V
         if start > last_end {
             spans.push(Span::styled(&text[last_end..start], base_style));
         }
-        // Add the highlighted match (preserve original case)
+        // Add the highlighted match
         let end = start + term.len();
         spans.push(Span::styled(&text[start..end], highlight_style));
         last_end = end;
@@ -471,7 +464,7 @@ fn highlight_term_in_text<'a>(text: &'a str, term: &str, base_style: Style) -> V
         spans.push(Span::styled(&text[last_end..], base_style));
     }
 
-    // If no matches, return the whole text with base style
+    // We need to return the whole text with base style if no matches found
     if spans.is_empty() {
         spans.push(Span::styled(text, base_style));
     }

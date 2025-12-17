@@ -31,7 +31,6 @@ async fn main() -> io::Result<()> {
     io::stdout().execute(EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
-    // Try to create LLM agent, fall back to mock
     let llm_agent = OpenAIProvider::new().ok().map(LLMAgent::new);
     let mock_agent = MockAgent::new();
 
@@ -46,7 +45,6 @@ async fn main() -> io::Result<()> {
         App::new()
     };
 
-    // NOTE: Show which agent is active
     if llm_agent.is_some() {
         app.conversation.push(Message {
             role: Role::Assistant,
@@ -84,7 +82,6 @@ async fn main() -> io::Result<()> {
             match &app.mode {
                 AppMode::Normal => match key.code {
                     KeyCode::Char('a') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
-                        // Toggle select all / select paragraph
                         app.highlight_all = !app.highlight_all;
                         let msg = if app.highlight_all {
                             "Full document selected (all paragraphs)"
@@ -103,7 +100,6 @@ async fn main() -> io::Result<()> {
                         app.redo();
                     }
                     KeyCode::Char('s') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
-                        // Manual save: commits current state and purges future versions if in the past
                         if let Err(e) = app.document.commit_current_state() {
                             app.conversation.push(Message {
                                 role: Role::Assistant,
@@ -182,7 +178,7 @@ async fn main() -> io::Result<()> {
                         } else if app.input.starts_with("/echoes") {
                             (app.input.clone(), operations::ECHOES, true, true, true, false)
                         } else if !app.input.is_empty() {
-                            // Freeform Editorial Mode: natural language input
+                            // NOTE: Freeform Editorial Mode, natural language input
                             // Check if user has selected full document via:
                             // 1. Ctrl+A (app.highlight_all)
                             // 2. /all prefix
@@ -194,7 +190,7 @@ async fn main() -> io::Result<()> {
                                 let trimmed = rest.trim_start();
                                 (trimmed.to_string(), true)
                             } else if app.input.starts_with("/full") {
-                                // Strip /full prefix (alias for /all)
+                                // Strip /full prefix 
                                 let rest = &app.input[5..];
                                 let trimmed = rest.trim_start();
                                 (trimmed.to_string(), true)
@@ -217,7 +213,7 @@ async fn main() -> io::Result<()> {
 
                             let is_full_doc_request = app.highlight_all || is_all_command || mentions_full_doc;
 
-                            // Use empty string as operation_prompt, will be handled differently
+                            // NOTE: Use empty string as operation_prompt, will be handled differently
                             (user_input, "", false, is_full_doc_request, false, false)
                         } else {
                             continue;
@@ -229,10 +225,10 @@ async fn main() -> io::Result<()> {
                             content: user_input.clone(),
                         });
 
-                        // Reset scroll to auto (show new content)
+                        // Reset scroll to auto
                         app.conversation_scroll = 0;
 
-                        // Highlight all paragraphs for full-doc operations
+                        // NOTE: Highlight all paragraphs for full-doc operations
                         // Note: app.highlight_all might already be true from Ctrl+A (manual toggle)
                         // Track if we're temporarily highlighting due to command (not manual Ctrl+A)
                         let was_manual_highlight = app.highlight_all;
@@ -241,7 +237,7 @@ async fn main() -> io::Result<()> {
                         }
 
                         let selected_idx = app.document.selected;
-                        // For full-doc operations, join all paragraphs
+                        // NOTE: For full-doc operations, join all paragraphs
                         // Use is_full_doc OR app.highlight_all (for Ctrl+A case)
                         let content = if is_full_doc || app.highlight_all {
                             app.document.paragraphs.iter()
@@ -265,10 +261,9 @@ async fn main() -> io::Result<()> {
                                 Prompt::new(
                                     &prompts::freeform_system_prompt(),
                                     &instruction,
-                                    "", // Content is already in the instruction
+                                    "", // NOTE: Content is already in the instruction
                                 )
                             } else {
-                                // Standard operation prompt
                                 Prompt::new(
                                     &prompts::system_prompt(),
                                     operation_prompt,
@@ -276,7 +271,6 @@ async fn main() -> io::Result<()> {
                                 )
                             };
 
-                            // Animated "Thinking" indicator
                             let dots = ["Thinking", "Thinking.", "Thinking..", "Thinking..."];
                             let mut dot_idx = 0;
                             app.conversation.push(Message {
@@ -289,7 +283,7 @@ async fn main() -> io::Result<()> {
                             tokio::pin!(llm_future);
 
                             let mut ticker = tokio::time::interval(Duration::from_millis(300));
-                            ticker.tick().await; // First tick is immediate
+                            ticker.tick().await; 
 
                             let response = loop {
                                 tokio::select! {
@@ -304,7 +298,7 @@ async fn main() -> io::Result<()> {
                                 }
                             };
 
-                            // Remove "Thinking..."
+                            // NOTE: Remove "Thinking..."
                             app.conversation.pop();
 
                             match response {
@@ -332,7 +326,7 @@ async fn main() -> io::Result<()> {
                                         // Handle based on response mode
                                         match response.result.mode {
                                             ResponseMode::None | ResponseMode::Critique => {
-                                                // Pure conversational or critique: no action needed
+                                                // NOTE: Pure conversational or critique: no action needed
                                                 // Comments already shown above
                                             }
                                             ResponseMode::Suggest => {
@@ -344,7 +338,7 @@ async fn main() -> io::Result<()> {
                                                             content: format!("[{}] {}", i + 1, alt),
                                                         });
                                                     }
-                                                    // Enter selection mode for non-informative ops
+                                                    // NOTE: Enter selection mode for non-informative ops
                                                     // Works for both single paragraph and full document
                                                     let is_full_doc_mode = is_full_doc || app.highlight_all;
                                                     if !is_informative {
@@ -357,7 +351,7 @@ async fn main() -> io::Result<()> {
                                                 }
                                             }
                                             ResponseMode::Replace => {
-                                                // Text replacement available
+                                                // NOTE: Text replacement available
                                                 // Only allow for single paragraph scope
                                                 let is_single_paragraph = !is_full_doc && !app.highlight_all;
                                                 if !is_informative && !response.result.text.is_empty() && is_single_paragraph {
@@ -367,7 +361,7 @@ async fn main() -> io::Result<()> {
                                             }
                                         }
                                     }
-                                    // Save summary to file if this was a summary operation
+                                    
                                     if is_summary {
                                         if let Some(ref file_path) = app.file_path {
                                             let summary_path = file_path.with_extension("");
@@ -378,7 +372,6 @@ async fn main() -> io::Result<()> {
                                             );
                                             let summary_path = file_path.with_file_name(summary_filename);
 
-                                            // Combine all comments into summary text
                                             let summary_content = response.comments.join("\n\n");
 
                                             match std::fs::write(&summary_path, &summary_content) {
@@ -405,13 +398,12 @@ async fn main() -> io::Result<()> {
                                     });
                                 }
                             }
-                            // Reset highlight only if it wasn't manually set via Ctrl+A
+                            // NOTE: Reset highlight only if it wasn't manually set via Ctrl+A
                             // If user pressed Ctrl+A, it stays active until they press Ctrl+A again
                             if !was_manual_highlight {
                                 app.highlight_all = false;
                             }
                         } else {
-                            // Use mock agent
                             let prompt = Prompt::new(
                                 &app.system_prompt,
                                 &user_input,
@@ -458,31 +450,31 @@ async fn main() -> io::Result<()> {
                 },
                 AppMode::BrowseRepeats { .. } => match key.code {
                     KeyCode::Char('e') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
-                        // Edit the currently selected paragraph
+                        // NOTE: Edit the currently selected paragraph
                         app.exit_browse_repeats();
                         app.enter_edit();
                     }
                     KeyCode::Char(c) if c.is_ascii_digit() || c.is_ascii_lowercase() => {
-                        // Use label_to_index for 1-9, a-z
+                        // NOTE:Use label_to_index for 1-9, a-z
                         if let Some(idx) = crate::document::label_to_index(c) {
                             app.highlight_term(idx + 1); // highlight_term expects 1-based
                         }
                     }
                     KeyCode::Esc => app.exit_browse_repeats(),
-                    // Allow navigation while browsing
+                    // NOTE: Allow navigation while browsing
                     KeyCode::Down => app.document.select_next(),
                     KeyCode::Up => app.document.select_prev(),
                     _ => {}
                 },
                 AppMode::MoreMenu => match key.code {
                     KeyCode::Char('q') => {
-                        app.toggle_more_menu(); // Close menu
+                        app.toggle_more_menu();
                     }
                     _ => {}
                 },
                 AppMode::Help => match key.code {
                     KeyCode::Char('q') => {
-                        app.toggle_help(); // Close help
+                        app.toggle_help();
                     }
                     _ => {}
                 },
