@@ -22,10 +22,39 @@ mnemosyne path/to/your-document.txt
 
 ### Requirements
 - Rust toolchain (for development)
-- OpenAI API key configured as environment variable:
-  - **Option 1:** `OPENAI_MNEMOSYNE_API_KEY` (project-specific, recommended)
-  - **Option 2:** `OPENAI_API_KEY` (global fallback)
+- OpenAI API key (configured via Settings or manually)
 - Document must use double-newline paragraph separation (`\n\n`)
+
+### Configuring Your API Key
+
+**Recommended: Use Settings (F11)**
+
+Press `F11` to open Settings, enter your OpenAI API key, and press `Ctrl+S` to save. The app will store it securely at `~/.config/mnemosyne/config.toml` with permissions 600 (owner read/write only).
+
+**Alternative Configuration Methods:**
+
+If you prefer to configure manually (though not necessary):
+
+*Manual config file editing:*
+```bash
+mkdir -p ~/.config/mnemosyne
+cp config.example.toml ~/.config/mnemosyne/config.toml
+nano ~/.config/mnemosyne/config.toml  # Add your API key
+```
+
+*Environment variables:*
+```bash
+export OPENAI_MNEMOSYNE_API_KEY="sk-your-key"
+# or
+export OPENAI_API_KEY="sk-your-key"
+```
+
+**Priority order:** config file > `OPENAI_MNEMOSYNE_API_KEY` > `OPENAI_API_KEY`
+
+**Security:**
+- Config file is created with permissions `600` (owner read/write only)
+- Prevents other users on the system from reading your API key
+- As secure as environment variables, but less visible system-wide
 
 ---
 
@@ -33,7 +62,7 @@ mnemosyne path/to/your-document.txt
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ F2:Summ F3:Crit F4:Reps ... F11:Sett F12:More ^Q:Exit      │ ← Function key bar
+│ F1:Help F2:Summ F3:Crit ... F11:Sett F12:More ^Q:Exit      │ ← Function key bar
 ├──────────────────┬──────────────────────────────────────────┤
 │                  │  [1] First paragraph text here...        │
 │  Left Panel:     │                                          │
@@ -182,6 +211,23 @@ Press Ctrl+A again to return to single paragraph mode
 **When to use Freeform vs. Operations:**
 - **Use Freeform when:** You want flexibility, creative rewrites, or conversational feedback
 - **Use Operations (F2-F10) when:** You want predictable, standardized results (grammar correction, style polish, etc.)
+
+---
+
+### F1 - Help
+**Scope:** Application-wide
+**Behavior:** Toggle help screen
+
+- Displays a quick reference cheatsheet with all keybindings and operations
+- Press `F1` or `q` to close
+- Available from any mode
+
+**Sections:**
+- Navigation keybindings
+- Editorial operations (F2-F10)
+- Freeform Editorial Mode usage
+- Version control commands
+- Direct editing commands
 
 ---
 
@@ -342,10 +388,23 @@ Output: my-essay-summary.txt (auto-saved)
 
 ### F11 - Settings
 **Scope:** Application configuration
-**Behavior:** Configuration menu (not yet implemented)
+**Behavior:** Edit settings interactively
 
-- Future: Edit system prompt, configure API keys, etc.
-- Currently shows "Settings not yet implemented" message
+**What you can configure:**
+- OpenAI API Key (stored in `~/.config/mnemosyne/config.toml`)
+
+**How to use:**
+1. Press F11 to open Settings
+2. Enter or edit your API key in the text field
+3. Press `Ctrl+S` to save changes
+4. Press `Esc` to cancel without saving
+
+**Security:**
+- Settings are saved to `~/.config/mnemosyne/config.toml`
+- File permissions are automatically set to `600` (owner read/write only)
+- Your API key is not exposed to other users on the system
+
+**Note:** You can also edit the config file manually if preferred, but F11 Settings is the recommended way.
 
 ---
 
@@ -569,6 +628,7 @@ When a full-doc operation is active, all paragraphs are visually highlighted.
 - **Manual Edit:** Use for precise control when AI suggestions miss the mark
 
 ### When to Use Each Operation
+- **Help (F1):** Anytime you need a quick reference of keybindings and operations
 - **Freeform Mode:** When you want flexible interaction, creative rewrites, or conversational feedback
 - **Summary (F2):** To generate abstracts or check document coherence
 - **Grammar (F6):** First pass - fix obvious errors
@@ -579,6 +639,6 @@ When a full-doc operation is active, all paragraphs are visually highlighted.
 - **Repeats (F4):** After full draft is done, to catch global repetitions
 - **Echoes (F10):** During revision, to catch local redundancy
 - **Critique (F3):** Before final polish, to get structural feedback
-- **Settings (F11):** Configure application (coming soon)
+- **Settings (F11):** To configure your OpenAI API key securely
 
 ---

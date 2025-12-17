@@ -39,6 +39,12 @@ pub enum AppMode {
     },
     /// More operations menu (F12)
     MoreMenu,
+    /// Help screen (F1)
+    Help,
+    /// Settings screen (F11)
+    Settings {
+        original_key: Option<String>,
+    },
 }
 
 pub struct App<'a> {
@@ -318,6 +324,97 @@ impl<'a> App<'a> {
     /// Check if More menu is open
     pub fn is_more_menu_open(&self) -> bool {
         matches!(self.mode, AppMode::MoreMenu)
+    }
+
+    /// Toggle Help screen (F1)
+    pub fn toggle_help(&mut self) {
+        self.mode = match self.mode {
+            AppMode::Help => AppMode::Normal,
+            _ => AppMode::Help,
+        };
+    }
+
+    /// Check if Help screen is open
+    pub fn is_help_open(&self) -> bool {
+        matches!(self.mode, AppMode::Help)
+    }
+
+    /// Enter Settings mode (F11)
+    pub fn enter_settings(&mut self) {
+        use ratatui::style::{Color, Style};
+        use ratatui::widgets::{Block, Borders};
+        use crate::config::Config;
+
+        let config = Config::load();
+        let original_key = config.api_key.clone();
+
+        // Create textarea for API key input
+        let mut textarea = TextArea::default();
+        if let Some(ref key) = original_key {
+            textarea.insert_str(key);
+        }
+        textarea.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Settings - API Key (Ctrl+S to save, Esc to cancel)")
+        );
+        textarea.set_cursor_line_style(Style::default());
+        textarea.set_style(Style::default().fg(Color::Yellow));
+
+        self.editor = Some(textarea);
+        self.mode = AppMode::Settings { original_key };
+    }
+
+    /// Apply settings changes
+    pub fn apply_settings(&mut self) {
+        if let AppMode::Settings { .. } = &self.mode {
+            if let Some(editor) = &self.editor {
+                use crate::config::Config;
+
+                // Get new API key from editor
+                let new_key = editor.lines().join("");
+                let new_key = new_key.trim();
+
+                // Create config with new key
+                let config = Config {
+                    api_key: if new_key.is_empty() {
+                        None
+                    } else {
+                        Some(new_key.to_string())
+                    },
+                };
+
+                // Save to file
+                match config.save() {
+                    Ok(()) => {
+                        self.conversation.push(Message {
+                            role: Role::Assistant,
+                            content: format!("Settings saved to ~/.config/mnemosyne/config.toml"),
+                        });
+                    }
+                    Err(e) => {
+                        self.conversation.push(Message {
+                            role: Role::Assistant,
+                            content: format!("Failed to save settings: {}", e),
+                        });
+                    }
+                }
+            }
+        }
+        self.editor = None;
+        self.mode = AppMode::Normal;
+    }
+
+    /// Cancel settings changes
+    pub fn cancel_settings(&mut self) {
+        if let AppMode::Settings { .. } = &self.mode {
+            self.conversation.push(Message {
+                role: Role::Assistant,
+                content: String::from("Settings changes discarded."),
+            });
+        }
+        self.editor = None;
+        self.mode = AppMode::Normal;
     }
 
     /// Get the currently highlighted term for rendering

@@ -1,5 +1,6 @@
 mod agent;
 mod app;
+mod config;
 mod document;
 mod ui;
 
@@ -68,6 +69,10 @@ async fn main() -> io::Result<()> {
                     app.quit();
                     continue;
                 }
+                KeyCode::F(1) => {
+                    app.toggle_help();
+                    continue;
+                }
                 KeyCode::F(12) => {
                     app.toggle_more_menu();
                     continue;
@@ -129,11 +134,7 @@ async fn main() -> io::Result<()> {
                         app.enter_edit();
                     }
                     KeyCode::F(11) => {
-                        // F11: Settings (placeholder for now)
-                        app.conversation.push(Message {
-                            role: Role::Assistant,
-                            content: String::from("Settings not yet implemented."),
-                        });
+                        app.enter_settings();
                     }
                     KeyCode::Char(c) => app.input.push(c),
                     KeyCode::Backspace => {
@@ -478,6 +479,25 @@ async fn main() -> io::Result<()> {
                         app.toggle_more_menu(); // Close menu
                     }
                     _ => {}
+                },
+                AppMode::Help => match key.code {
+                    KeyCode::Char('q') => {
+                        app.toggle_help(); // Close help
+                    }
+                    _ => {}
+                },
+                AppMode::Settings { .. } => match key.code {
+                    KeyCode::Esc => {
+                        app.cancel_settings();
+                    }
+                    KeyCode::Char('s') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        app.apply_settings();
+                    }
+                    _ => {
+                        if let Some(editor) = &mut app.editor {
+                            editor.input(key);
+                        }
+                    }
                 },
             }
         }

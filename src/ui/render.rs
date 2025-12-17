@@ -67,6 +67,13 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
                 hint_style,
             )));
         }
+        AppMode::Settings { .. } => {
+            let hint_style = Style::default().fg(Color::Yellow);
+            lines.push(Line::from(Span::styled(
+                "Settings — [Ctrl+S] Save  [Esc] Cancel",
+                hint_style,
+            )));
+        }
         AppMode::BrowseRepeats { terms, highlighted } => {
             let hint_style = Style::default().fg(Color::Yellow);
             let label_hint = if terms.len() <= 9 {
@@ -95,6 +102,144 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
             lines.push(Line::from(""));
             lines.push(Line::from(""));
             lines.push(Line::from(Span::styled("[q] Close  [F12] Close", hint_style)));
+        }
+        AppMode::Help => {
+            // Clear previous lines and show the Help screen
+            lines.clear();
+            let title_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
+            let section_style = Style::default().fg(Color::Green).add_modifier(Modifier::BOLD);
+            let key_style = Style::default().fg(Color::Yellow);
+            let desc_style = Style::default().fg(Color::White);
+            let hint_style = Style::default().fg(Color::DarkGray);
+
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled("Mnemosyne - Quick Reference", title_style)));
+            lines.push(Line::from(""));
+
+            // Navigation
+            lines.push(Line::from(Span::styled("Navigation", section_style)));
+            lines.push(Line::from(vec![
+                Span::styled("  ↓/↑ Ctrl+J/K  ", key_style),
+                Span::styled("Select paragraph", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  Ctrl+A         ", key_style),
+                Span::styled("Toggle full document selection", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  PageUp/Down    ", key_style),
+                Span::styled("Scroll conversation", desc_style),
+            ]));
+            lines.push(Line::from(""));
+
+            // Editorial Operations
+            lines.push(Line::from(Span::styled("Editorial Operations", section_style)));
+            lines.push(Line::from(vec![
+                Span::styled("  F2 ", key_style),
+                Span::styled("Summary", desc_style),
+                Span::styled("  (full doc, saves to file)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F3 ", key_style),
+                Span::styled("Critique", desc_style),
+                Span::styled(" (full doc, feedback)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F4 ", key_style),
+                Span::styled("Repeats", desc_style),
+                Span::styled("  (full doc, browse mode)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F5 ", key_style),
+                Span::styled("Style", desc_style),
+                Span::styled("    (paragraph, auto-apply)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F6 ", key_style),
+                Span::styled("Grammar", desc_style),
+                Span::styled("  (paragraph, auto-apply)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F7 ", key_style),
+                Span::styled("Rephrase", desc_style),
+                Span::styled(" (paragraph, choose alternative)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F8 ", key_style),
+                Span::styled("Thesaurus", desc_style),
+                Span::styled("(paragraph, suggestions)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F9 ", key_style),
+                Span::styled("Overuse", desc_style),
+                Span::styled("  (paragraph, flags clichés)", hint_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F10", key_style),
+                Span::styled(" Echoes", desc_style),
+                Span::styled("   (full doc, proximity repeats)", hint_style),
+            ]));
+            lines.push(Line::from(""));
+
+            // Freeform Mode
+            lines.push(Line::from(Span::styled("Freeform Editorial Mode", section_style)));
+            lines.push(Line::from(Span::styled("  Type naturally, LLM infers intent:", desc_style)));
+            lines.push(Line::from(vec![
+                Span::styled("    /all or /full ", key_style),
+                Span::styled("Apply to full document", desc_style),
+            ]));
+            lines.push(Line::from(Span::styled("  Examples: \"make this more concise\", \"translate to Spanish\"", hint_style)));
+            lines.push(Line::from(""));
+
+            // Version Control
+            lines.push(Line::from(Span::styled("Version Control", section_style)));
+            lines.push(Line::from(vec![
+                Span::styled("  Ctrl+Z         ", key_style),
+                Span::styled("Undo (saves to file)", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  Ctrl+Y         ", key_style),
+                Span::styled("Redo (saves to file)", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  Ctrl+S         ", key_style),
+                Span::styled("Commit current state, purge future", desc_style),
+            ]));
+            lines.push(Line::from(""));
+
+            // Editing
+            lines.push(Line::from(Span::styled("Direct Editing", section_style)));
+            lines.push(Line::from(vec![
+                Span::styled("  Ctrl+E         ", key_style),
+                Span::styled("Edit paragraph (sentence-by-sentence)", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  Enter/Esc      ", key_style),
+                Span::styled("Accept/Reject suggestions", desc_style),
+            ]));
+            lines.push(Line::from(""));
+
+            // Other
+            lines.push(Line::from(Span::styled("Other", section_style)));
+            lines.push(Line::from(vec![
+                Span::styled("  F1             ", key_style),
+                Span::styled("Toggle this help", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F11            ", key_style),
+                Span::styled("Settings (configure API key)", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  F12            ", key_style),
+                Span::styled("More operations menu", desc_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("  Ctrl+Q         ", key_style),
+                Span::styled("Quit", desc_style),
+            ]));
+            lines.push(Line::from(""));
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled("[F1] Close  [q] Close", Style::default().fg(Color::Yellow))));
         }
     }
 
@@ -133,6 +278,34 @@ fn draw_conversation_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
 
 fn draw_document_panel(frame: &mut Frame, app: &App<'_>, area: &Rect) {
     // Check if we're in Edit mode
+    // Settings mode: show instructions and editor
+    if let AppMode::Settings { .. } = &app.mode {
+        let chunks = Layout::vertical([
+            Constraint::Length(8),
+            Constraint::Min(3),
+        ])
+        .split(*area);
+
+        // Instructions panel
+        let instructions = vec![
+            Line::from(""),
+            Line::from(Span::styled("Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))),
+            Line::from(""),
+            Line::from(Span::styled("Enter your OpenAI API Key below:", Style::default().fg(Color::White))),
+            Line::from(Span::styled("The key will be saved to ~/.config/mnemosyne/config.toml", Style::default().fg(Color::DarkGray))),
+            Line::from(Span::styled("with permissions 600 (owner read/write only)", Style::default().fg(Color::DarkGray))),
+        ];
+        let instructions_panel = Paragraph::new(instructions)
+            .block(Block::default().borders(Borders::ALL));
+        frame.render_widget(instructions_panel, chunks[0]);
+
+        // Editor for API key
+        if let Some(editor) = &app.editor {
+            frame.render_widget(editor, chunks[1]);
+        }
+        return;
+    }
+
     if let AppMode::Edit { paragraph_index, original } = &app.mode {
         // Split area: original on top (40%), editor below (60%)
         let chunks = Layout::vertical([

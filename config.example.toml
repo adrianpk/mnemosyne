@@ -1,0 +1,7 @@
+# Mnemosyne Configuration File
+# Place this file at: ~/.config/mnemosyne/config.toml
+# The file will be automatically created with permissions 600 (owner read/write only)
+
+# OpenAI API Key (optional if using environment variables)
+# Priority: config file > OPENAI_MNEMOSYNE_API_KEY > OPENAI_API_KEY
+api_key = "sk-your-api-key-here"

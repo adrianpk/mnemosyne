@@ -1,10 +1,10 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::fs::OpenOptions;
 use std::io::Write;
 
 use super::{LLMResponse, Prompt};
+use crate::config::Config;
 
 /// Log LLM responses for debugging parse errors.
 fn log_response(content: &str, error: Option<&str>) {
@@ -36,7 +36,7 @@ pub enum LLMError {
 impl std::fmt::Display for LLMError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LLMError::MissingApiKey => write!(f, "API key not found in environment"),
+            LLMError::MissingApiKey => write!(f, "API key not found. Set it in ~/.config/mnemosyne/config.toml or use OPENAI_MNEMOSYNE_API_KEY / OPENAI_API_KEY environment variables."),
             LLMError::RequestFailed(e) => write!(f, "Request failed: {}", e),
             LLMError::InvalidResponse(e) => write!(f, "Invalid response: {}", e),
             LLMError::ParseError(_) => write!(f, "Could not parse response. Please try again."),
@@ -91,9 +91,8 @@ struct OpenAIResponseMessage {
 
 impl OpenAIProvider {
     pub fn new() -> Result<Self, LLMError> {
-        let api_key = env::var("OPENAI_MNEMOSYNE_API_KEY")
-            .or_else(|_| env::var("OPENAI_API_KEY"))
-            .map_err(|_| LLMError::MissingApiKey)?;
+        let api_key = Config::get_api_key()
+            .ok_or(LLMError::MissingApiKey)?;
 
         Ok(OpenAIProvider {
             client: Client::new(),
