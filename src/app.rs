@@ -164,7 +164,7 @@ impl<'a> App<'a> {
                 }
 
                 if *is_full_document {
-                    // Full document: parse numbered paragraphs from selected alternative
+                    // Full document, we parse numbered paragraphs from selected alternative
                     let selected = &alternatives[choice - 1];
                     let parsed = parse_numbered_paragraphs(selected);
 
@@ -177,20 +177,17 @@ impl<'a> App<'a> {
                         return false;
                     }
 
-                    // Allow different paragraph count - the document structure can change
-                    // User can always undo (Ctrl+Z) if they don't like the result
+                    // Allow different paragraph count, the document structure can change
                     self.document.paragraphs = parsed;
 
-                    // Reset selection if it's now out of bounds
                     if self.document.selected >= self.document.paragraphs.len() {
                         self.document.selected = self.document.paragraphs.len().saturating_sub(1);
                     }
                 } else {
-                    // Single paragraph: apply directly
+                    // NOTE: Single paragraph: apply directly
                     self.document.paragraphs[*paragraph_index] = alternatives[choice - 1].clone();
                 }
 
-                // Save to file
                 if let Err(e) = self.document.save_to_file() {
                     self.conversation.push(Message {
                         role: Role::Assistant,
@@ -226,7 +223,6 @@ impl<'a> App<'a> {
         let paragraph_index = self.document.selected;
         let original = self.document.paragraphs[paragraph_index].clone();
 
-        // Split text into sentences for easier editing
         let sentences = split_into_sentences(&original);
         let formatted = sentences.join("\n");
 
@@ -238,7 +234,7 @@ impl<'a> App<'a> {
                 .title("Edit (Ctrl+S to apply)")
         );
         textarea.set_cursor_line_style(Style::default());
-        textarea.set_style(Style::default().fg(Color::Rgb(187, 154, 247))); // purple like suggestions
+        textarea.set_style(Style::default().fg(Color::Rgb(187, 154, 247))); // purple 
 
         self.editor = Some(textarea);
         self.mode = AppMode::Edit {
@@ -258,11 +254,10 @@ impl<'a> App<'a> {
                     });
                 }
 
-                // Join lines back with spaces (sentences were split by newlines)
+                // NOTE: Join lines back with spaces
                 let new_text = editor.lines().join(" ");
                 self.document.paragraphs[*paragraph_index] = new_text;
 
-                // Save to file
                 if let Err(e) = self.document.save_to_file() {
                     self.conversation.push(Message {
                         role: Role::Assistant,
@@ -480,7 +475,7 @@ fn default_system_prompt() -> String {
 }
 
 /// Parse numbered paragraphs from LLM output format.
-/// Expected format: "[N] paragraph text...\n\n[N+1] paragraph text..." where N is the paragraph number.
+/// We expected a format like this: "[N] paragraph text...\n\n[N+1] paragraph text..." where N is the paragraph number.
 /// Returns a Vec of paragraph strings without the numbering prefix.
 fn parse_numbered_paragraphs(text: &str) -> Vec<String> {
     text.split("\n\n")
@@ -527,7 +522,7 @@ fn split_into_sentences(text: &str) -> Vec<String> {
         i += 1;
     }
 
-    // Don't forget the last sentence
+    // NOTE: To avoid forgetting the last sentence
     if !current.trim().is_empty() {
         sentences.push(current.trim().to_string());
     }

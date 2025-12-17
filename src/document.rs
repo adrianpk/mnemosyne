@@ -45,14 +45,14 @@ impl Document {
         let version_dir = Self::get_version_dir(path);
 
         // Count existing versions
-        let total_versions = Self::count_versions(&version_dir).unwrap_or(0) + 1; // +1 for current
+        let total_versions = Self::count_versions(&version_dir).unwrap_or(0) + 1;
 
         Ok(Document {
             paragraphs,
             selected: 0,
             source_path: Some(path.to_path_buf()),
             version_dir: Some(version_dir),
-            current_version: total_versions - 1, // Start at latest version
+            current_version: total_versions - 1, // NOTE: Start at latest version
             total_versions,
         })
     }
@@ -69,14 +69,12 @@ impl Document {
         }
     }
 
-    /// Get the version directory path for a source file
     fn get_version_dir(source_path: &Path) -> PathBuf {
         let parent = source_path.parent().unwrap_or(Path::new("."));
         let filename = source_path.file_name().unwrap().to_string_lossy();
         parent.join(".mnemosyne").join("versions").join(filename.as_ref())
     }
 
-    /// Count existing version files in the version directory
     fn count_versions(version_dir: &Path) -> std::io::Result<usize> {
         if !version_dir.exists() {
             return Ok(0);
@@ -88,7 +86,7 @@ impl Document {
         Ok(count)
     }
 
-    /// Purge future versions (called when committing to a past version)
+    /// NOTE: Purge future versions we call this when committing to a past version
     fn purge_future_versions(&mut self) -> std::io::Result<()> {
         if self.current_version >= self.total_versions - 1 {
             return Ok(()); // Already at latest version, nothing to purge
@@ -99,24 +97,21 @@ impl Document {
             None => return Ok(()),
         };
 
-        // If we're not at the latest version, discard all future versions (linear history)
+        // NOTE: If we're not at the latest version, discard all future versions (linear history)
         // Example: if current_version=2 (v3 displayed), total_versions=7 (v1-v7)
         // We want to keep v1-v3 and delete v4-v7
         // Saved files are: 000-*.txt (snapshot before v2), 001-*.txt (snapshot before v3), etc.
         // current_version=2 means we're AT v3, so we keep files 000 and 001, delete 002+
 
         // Delete version files from current_version onwards (these are snapshots BEFORE future versions)
-        let versions_to_delete_from = self.current_version; // Keep files < current_version
+        let versions_to_delete_from = self.current_version; // NOTE: Keep files < current_version
 
         if let Ok(entries) = fs::read_dir(version_dir) {
             for entry in entries.filter_map(|e| e.ok()) {
                 let path = entry.path();
                 if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                    // Extract version number from filename (format: "NNN-timestamp.txt")
                     if let Some(version_str) = filename.split('-').next() {
                         if let Ok(version_num) = version_str.parse::<usize>() {
-                            // Delete this file if it's >= versions_to_delete_from
-                            // These are snapshots for versions we're discarding
                             if version_num >= versions_to_delete_from {
                                 let _ = fs::remove_file(&path);
                             }

@@ -15,7 +15,6 @@ impl Config {
         dirs::config_dir().map(|dir| dir.join("mnemosyne").join("config.toml"))
     }
 
-    /// Load config from file, or return default if file doesn't exist
     pub fn load() -> Self {
         let path = match Self::config_path() {
             Some(p) => p,
@@ -38,20 +37,16 @@ impl Config {
             std::io::Error::new(std::io::ErrorKind::NotFound, "Config directory not found")
         })?;
 
-        // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
 
-        // Serialize config
         let content = toml::to_string_pretty(self).map_err(|e| {
             std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())
         })?;
 
-        // Write to file
         fs::write(&path, content)?;
 
-        // Set restrictive permissions (600 - owner read/write only)
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -64,7 +59,6 @@ impl Config {
 
     /// Get API key with priority: config file > OPENAI_MNEMOSYNE_API_KEY > OPENAI_API_KEY
     pub fn get_api_key() -> Option<String> {
-        // Priority 1: Config file
         let config = Self::load();
         if let Some(key) = config.api_key {
             if !key.is_empty() {
@@ -72,14 +66,12 @@ impl Config {
             }
         }
 
-        // Priority 2: OPENAI_MNEMOSYNE_API_KEY
         if let Ok(key) = env::var("OPENAI_MNEMOSYNE_API_KEY") {
             if !key.is_empty() {
                 return Some(key);
             }
         }
 
-        // Priority 3: OPENAI_API_KEY
         if let Ok(key) = env::var("OPENAI_API_KEY") {
             if !key.is_empty() {
                 return Some(key);

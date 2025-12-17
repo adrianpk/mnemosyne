@@ -58,29 +58,6 @@ export OPENAI_API_KEY="sk-your-key"
 
 ---
 
-## Interface Layout
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ F1:Help F2:Summ F3:Crit ... F11:Sett F12:More ^Q:Exit      │ ← Function key bar
-├──────────────────┬──────────────────────────────────────────┤
-│                  │  [1] First paragraph text here...        │
-│  Left Panel:     │                                          │
-│  - Conversation  │  [2] Second paragraph (SELECTED) ←       │
-│  - LLM results   │                                          │
-│  - Suggestions   │  [3] Third paragraph...                  │
-│  - History       │                                          │
-│                  │  ...                                     │
-│                  │                                          │
-│  > user input    │  Right Panel: Document View              │
-└──────────────────┴──────────────────────────────────────────┘
-```
-
-**Left Panel:** Command input, LLM responses, suggestions, diffs
-**Right Panel:** Document split into numbered paragraphs (one always selected)
-
----
-
 ## Navigation & Basic Controls
 
 ### Paragraph Selection
@@ -412,20 +389,7 @@ Output: my-essay-summary.txt (auto-saved)
 **Scope:** Additional operations menu
 **Behavior:** Opens modal for future operations
 
-Press `F12` to open the More Operations modal:
-
-```
-┌─────────────────────────────┐
-│      More Operations        │
-├─────────────────────────────┤
-│  (No additional operations  │
-│   yet)                      │
-│                             │
-│  [q] Close  [F12] Close     │
-└─────────────────────────────┘
-```
-
-Currently empty but available for future less-frequently used operations.
+Press `F12` to open the More Operations modal. Currently empty but available for future less-frequently used operations.
 
 **Closing the modal:**
 - Press `F12` again (toggle)

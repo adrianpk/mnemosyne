@@ -13,3 +13,7 @@
 ### LLM Critique
 
 ![Mnemosyne CLI](../img/cli-critique.png)
+
+### Help Screen
+
+![Mnemosyne CLI](../img/cli-help.png)
